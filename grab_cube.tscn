@@ -1,0 +1,35 @@
+[gd_scene format=3 uid="uid://dwu4wcg57030f"]
+
+[ext_resource type="PackedScene" uid="uid://c8l60rnugru40" path="res://addons/godot-xr-tools/objects/pickable.tscn" id="1_8xqqq"]
+[ext_resource type="Script" uid="uid://dx3swqg2owe4p" path="res://addons/godot-xr-tools/objects/grab_points/grab_point_hand.gd" id="2_40qdq"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_40qdq"]
+size = Vector3(0.1, 0.1, 0.1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jcyke"]
+albedo_color = Color(0.5237664, 0.5440804, 0.89917016, 1)
+roughness = 0.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_qoiot"]
+material = SubResource("StandardMaterial3D_jcyke")
+size = Vector3(0.1, 0.1, 0.1)
+
+[node name="PickableObject" unique_id=639255984 instance=ExtResource("1_8xqqq")]
+second_hand_grab = 1
+
+[node name="CollisionShape3D" parent="." index="0"]
+shape = SubResource("BoxShape3D_40qdq")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." index="1" unique_id=1822278123]
+mesh = SubResource("BoxMesh_qoiot")
+
+[node name="GripPointLeft" type="Marker3D" parent="." index="2" unique_id=683026074]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.024739344, 0.051029444, -0.038257986)
+script = ExtResource("2_40qdq")
+metadata/_custom_type_script = "uid://dx3swqg2owe4p"
+
+[node name="GripPointRight" type="Marker3D" parent="." index="3" unique_id=1232636704]
+transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -0.024739344, 0.051029444, 0.046795137)
+script = ExtResource("2_40qdq")
+hand = 1
+metadata/_custom_type_script = "uid://dx3swqg2owe4p"
