@@ -16,7 +16,7 @@ general/accessibility_support=2
 
 config/name="VR Demo"
 run/main_scene="uid://eqapjf615lyr"
-config/features=PackedStringArray("4.6", "Forward Plus")
+config/features=PackedStringArray("4.7", "Forward Plus")
 boot_splash/show_image=false
 boot_splash/use_filter=false
 config/icon="res://icon.svg"
@@ -31,6 +31,16 @@ XrSimulator="*uid://ctltchlf2j2r4"
 
 enabled=PackedStringArray("res://addons/godot-xr-tools/plugin.cfg")
 
+[global_group]
+
+game_over_text=""
+headwear=""
+outside_floor=""
+
+[godot_xr_tools]
+
+player/standard_height=1.75
+
 [layer_names]
 
 3d_physics/layer_1="Static World"
@@ -38,6 +48,8 @@ enabled=PackedStringArray("res://addons/godot-xr-tools/plugin.cfg")
 3d_physics/layer_3="Pickable Objects"
 3d_physics/layer_4="Wall Walking"
 3d_physics/layer_5="Grappling Target"
+3d_physics/layer_7="floor"
+3d_physics/layer_9="Headwear"
 3d_physics/layer_17="Held Objects"
 3d_physics/layer_18="Player Hands"
 3d_physics/layer_19="Grab Handles"
@@ -58,4 +70,7 @@ rendering_device/driver.windows="d3d12"
 [xr]
 
 openxr/enabled=true
+openxr/submit_depth_buffer=true
+openxr/extensions/debug_utils=3
+openxr/extensions/frame_synthesis=true
 shaders/enabled=true

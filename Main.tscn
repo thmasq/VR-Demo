@@ -1,0 +1,529 @@
+[gd_scene format=3 uid="uid://eqapjf615lyr"]
+
+[ext_resource type="Texture2D" uid="uid://bpm2qvpj7ctfh" path="res://rustig_koppie_puresky_4k.exr" id="1_c2ibq"]
+[ext_resource type="PackedScene" uid="uid://n2jssaw6dr3q" path="res://CrownSnap.tscn" id="2_j4qnp"]
+[ext_resource type="PackedScene" uid="uid://bq86r4yll8po" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/left_fullglove_low.tscn" id="3_fpfj3"]
+[ext_resource type="PackedScene" uid="uid://b4ysuy43poobf" path="res://addons/godot-xr-tools/functions/function_pickup.tscn" id="4_sc1dx"]
+[ext_resource type="PackedScene" uid="uid://xqimcf20s2jp" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/right_fullglove_low.tscn" id="5_kjvhd"]
+[ext_resource type="PackedScene" uid="uid://diyu06cw06syv" path="res://addons/godot-xr-tools/player/player_body.tscn" id="6_5tuhn"]
+[ext_resource type="PackedScene" uid="uid://dwu4wcg57030f" path="res://FireSlime.tscn" id="7_2gh4u"]
+[ext_resource type="PackedScene" uid="uid://bw4jjk4lipmct" path="res://Crown.tscn" id="8_devvj"]
+[ext_resource type="Shader" uid="uid://jrwysjg2cuq0" path="res://water.gdshader" id="9_3b0ty"]
+[ext_resource type="PackedScene" uid="uid://dqsfneiny05qe" path="res://Castle.tscn" id="10_bg4s2"]
+[ext_resource type="Texture2D" uid="uid://ceixgxq73txjx" path="res://textures/Poliigon_GrassPatchyGround_4585_BaseColor.jpg" id="11_hhcpw"]
+[ext_resource type="Texture2D" uid="uid://dkfdoyt736qqq" path="res://textures/Poliigon_GrassPatchyGround_4585_AmbientOcclusion.jpg" id="12_mxvw5"]
+[ext_resource type="Texture2D" uid="uid://dqtwsmrelfq8m" path="res://textures/Poliigon_GrassPatchyGround_4585_Normal.png" id="13_xrxkg"]
+[ext_resource type="PackedScene" uid="uid://bfvn217w1kdr5" path="res://GeoSlime.tscn" id="14_sqvbp"]
+
+[sub_resource type="GDScript" id="GDScript_7mycd"]
+script/source = "extends Node3D
+
+var interface : XRInterface
+
+func _ready():
+	interface = XRServer.find_interface(\"OpenXR\")
+	if interface and interface.is_initialized():
+		print(\"OpenXR initialized successfully\")
+		
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+		
+		get_viewport().use_xr = true
+	else:
+		print(\"OpenXR not initialized, please check if your headset is connected\")
+
+func _process(_delta: float) -> void:
+	pass
+"
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_0gdck"]
+panorama = ExtResource("1_c2ibq")
+energy_multiplier = 0.8
+
+[sub_resource type="Sky" id="Sky_7mycd"]
+resource_local_to_scene = true
+sky_material = SubResource("PanoramaSkyMaterial_0gdck")
+process_mode = 3
+
+[sub_resource type="Environment" id="Environment_h2yge"]
+background_mode = 2
+background_energy_multiplier = 0.67
+sky = SubResource("Sky_7mycd")
+sky_rotation = Vector3(0, 1.3089969, 0)
+ambient_light_source = 3
+ambient_light_color = Color(1, 1, 1, 1)
+reflected_light_source = 2
+ssao_enabled = true
+ssao_intensity = 3.0
+ssil_enabled = true
+sdfgi_enabled = true
+fog_enabled = true
+fog_mode = 1
+fog_density = 1.0
+fog_sky_affect = 0.774
+fog_depth_curve = 1.8660669
+fog_depth_begin = 100.0
+fog_depth_end = 500.0
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_0gdck"]
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_272bh"]
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_5vw27"]
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_kek77"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_w48qg"]
+size = Vector3(3.3031616, 0.0993042, 3.3009033)
+
+[sub_resource type="Shader" id="Shader_4c57u"]
+code = "shader_type spatial;
+render_mode blend_mix, depth_draw_opaque, cull_back;
+
+// --- BASE COLOR ---
+uniform vec4 albedo : source_color = vec4(0.8, 0.65, 0.45, 1.0); // Warm Kraft Paper Tan
+uniform sampler2D texture_albedo : source_color, filter_linear_mipmap, repeat_enable;
+
+// NEW: This threshold forces the material into the Opaque pipeline, fixing your depth bug!
+uniform float alpha_scissor_threshold : hint_range(0.0, 1.0) = 0.5;
+
+// --- CEL SHADING SHADOWS ---
+uniform vec4 shadow_color : source_color = vec4(0.5, 0.35, 0.2, 1.0); // Darker, warm brown
+uniform float shadow_threshold : hint_range(-1.0, 1.0, 0.01) = 0.0;
+uniform float shadow_softness : hint_range(0.0, 1.0, 0.01) = 0.05; 
+
+// --- AMBIENT OCCLUSION ---
+uniform sampler2D texture_ao : hint_default_white, filter_linear_mipmap, repeat_enable;
+uniform float ao_strength : hint_range(0.0, 1.0, 0.01) = 1.0;
+
+uniform vec3 uv1_scale = vec3(1.0);
+uniform vec3 uv1_offset = vec3(0.0);
+
+// Varying to pass AO data from fragment to light function
+varying float toon_ao;
+
+void vertex() {
+    UV = UV * uv1_scale.xy + uv1_offset.xy;
+}
+
+void fragment() {
+    vec2 base_uv = UV;
+    vec4 albedo_tex = texture(texture_albedo, base_uv);
+    
+    ALBEDO = albedo.rgb * albedo_tex.rgb;
+    
+    // --- THE DEPTH FIX ---
+    ALPHA = albedo.a * albedo_tex.a;
+    ALPHA_SCISSOR_THRESHOLD = alpha_scissor_threshold; 
+    // (Note: If your cardboard never has holes, you can completely delete 
+    // the ALPHA and ALPHA_SCISSOR_THRESHOLD lines to make it purely opaque)
+
+    // --- THE AO SETUP ---
+    toon_ao = mix(1.0, texture(texture_ao, base_uv).r, ao_strength);
+}
+
+void light() {
+    float NdotL = dot(NORMAL, LIGHT);
+
+    // --- APPLY THE AO HACK ---
+    // Multiply light direction by AO to force crevices into the stylized shadow
+    float adjusted_light = NdotL * toon_ao;
+
+    float light_intensity = smoothstep(shadow_threshold - shadow_softness, shadow_threshold + shadow_softness, adjusted_light);
+
+    vec3 diffuse = mix(shadow_color.rgb * ALBEDO, ALBEDO, light_intensity);
+
+    DIFFUSE_LIGHT += diffuse * LIGHT_COLOR * ATTENUATION;
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_efxa6"]
+render_priority = 0
+shader = SubResource("Shader_4c57u")
+shader_parameter/albedo = Color(0.4150128, 0.3384162, 0.2826305, 1)
+shader_parameter/alpha_scissor_threshold = 0.5
+shader_parameter/shadow_color = Color(0.5019608, 0.34901962, 0.2, 1)
+shader_parameter/shadow_threshold = -2.2352000028647012e-08
+shader_parameter/shadow_softness = 0.0
+shader_parameter/ao_strength = 1.0
+shader_parameter/uv1_scale = Vector3(1, 1, 1)
+shader_parameter/uv1_offset = Vector3(0, 0, 0)
+
+[sub_resource type="GDScript" id="GDScript_kek77"]
+resource_name = "halo_tracker"
+script/source = "extends Node3D
+
+@export var camera: XRCamera3D 
+@export var float_height: float = 0.3
+@export var follow_speed: float = 16.0
+
+func _process(delta: float) -> void:
+	if camera:
+		var target_position = camera.global_position + Vector3(0, float_height, 0)
+		var target_y_rotation = camera.global_rotation.y
+		
+		global_position = target_position
+		global_rotation.y = lerp_angle(global_rotation.y, target_y_rotation, follow_speed * delta)
+"
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rxs8h"]
+transparency = 1
+cull_mode = 2
+depth_draw_mode = 2
+no_depth_test = true
+shading_mode = 0
+albedo_color = Color(0, 0, 0, 0)
+
+[sub_resource type="QuadMesh" id="QuadMesh_hpdbv"]
+material = SubResource("StandardMaterial3D_rxs8h")
+center_offset = Vector3(0, 0, -0.055)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_hpdbv"]
+size = Vector2(4.46, 0.5)
+subdivide_width = 64
+subdivide_depth = 64
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_ycdy4"]
+noise_type = 3
+frequency = 0.016
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_efxa6"]
+noise = SubResource("FastNoiseLite_ycdy4")
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_w48qg"]
+noise_type = 3
+frequency = 0.064
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_dg77c"]
+noise = SubResource("FastNoiseLite_w48qg")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_4c57u"]
+render_priority = 0
+shader = ExtResource("9_3b0ty")
+shader_parameter/WATER_COL = Color(0.176471, 0.635294, 0.85098, 1)
+shader_parameter/WATER2_COL = Color(0.0588235, 0.529412, 0.776471, 1)
+shader_parameter/FOAM_COL = Color(0.87451, 0.988235, 1, 1)
+shader_parameter/distortion_speed = 2.0
+shader_parameter/tile = Vector2(1.945, 5)
+shader_parameter/specular_color = Color(0, 0.09959153, 0.5667353, 1)
+shader_parameter/specular_threshold = 0.81999998167136
+shader_parameter/specular_softness = 0.01
+shader_parameter/edge_scale = 0.23999999463552
+shader_parameter/edge_wobble_speed = 3.70000005513444
+shader_parameter/edge_wobble_size = 0.02999999932944
+shader_parameter/wave_layer_1 = SubResource("NoiseTexture2D_efxa6")
+shader_parameter/wave_layer_2 = SubResource("NoiseTexture2D_dg77c")
+shader_parameter/wave_amplitude = 0.0499999988824
+shader_parameter/layer_1_speed = Vector2(0.015, 0.014)
+shader_parameter/layer_2_speed = Vector2(0.025, 0.025)
+shader_parameter/layer_1_scale = 0.53999998792992
+shader_parameter/layer_2_scale = 0.02999999932944
+
+[sub_resource type="Shader" id="Shader_vivmo"]
+code = "shader_type spatial;
+render_mode blend_mix, depth_draw_opaque, cull_back;
+
+// --- BASE COLOR ---
+uniform vec4 albedo : source_color = vec4(0.4, 0.8, 0.3, 1.0); // Vibrant Zelda Green
+uniform sampler2D texture_albedo : source_color, filter_linear_mipmap, repeat_enable;
+
+// --- SMART POSTERIZATION ---
+// Crushes the messy grass blades into painted, stylized chunks
+uniform bool use_posterization = true;
+uniform float color_steps : hint_range(1.0, 16.0, 1.0) = 3.0; 
+uniform float black_level_lift : hint_range(0.0, 1.0, 0.01) = 0.15; 
+
+// --- NORMAL & AO MAPS ---
+uniform sampler2D texture_normal : hint_normal, filter_linear_mipmap, repeat_enable;
+uniform float normal_scale : hint_range(-16.0, 16.0) = 1.0;
+
+uniform sampler2D texture_ambient_occlusion : hint_default_white, filter_linear_mipmap, repeat_enable;
+uniform float ao_strength : hint_range(0.0, 1.0, 0.01) = 1.0;
+
+// --- CEL SHADING SHADOWS ---
+uniform vec4 shadow_color : source_color = vec4(0.1, 0.35, 0.25, 1.0); // Deep, cool forest green
+uniform float shadow_threshold : hint_range(-1.0, 1.0, 0.01) = 0.0;
+uniform float shadow_softness : hint_range(0.0, 1.0, 0.01) = 0.02; // Tiny bit of softness for organic grass
+
+// --- TRIPLANAR MAPPING SETUP ---
+varying vec3 uv1_triplanar_pos;
+uniform float uv1_blend_sharpness : hint_range(0.0, 150.0, 0.001) = 1.0;
+varying vec3 uv1_power_normal;
+
+uniform vec3 uv1_scale = vec3(1.0, 1.0, 1.0);
+uniform vec3 uv1_offset = vec3(0.0, 0.0, 0.0);
+
+varying float toon_ao;
+
+void vertex() {
+    // Standard Godot Triplanar math (DO NOT TOUCH!)
+    vec3 normal = MODEL_NORMAL_MATRIX * NORMAL;
+
+    TANGENT = vec3(0.0, 0.0, -1.0) * abs(normal.x);
+    TANGENT += vec3(1.0, 0.0, 0.0) * abs(normal.y);
+    TANGENT += vec3(1.0, 0.0, 0.0) * abs(normal.z);
+    TANGENT = inverse(MODEL_NORMAL_MATRIX) * normalize(TANGENT);
+
+    BINORMAL = vec3(0.0, 1.0, 0.0) * abs(normal.x);
+    BINORMAL += vec3(0.0, 0.0, -1.0) * abs(normal.y);
+    BINORMAL += vec3(0.0, 1.0, 0.0) * abs(normal.z);
+    BINORMAL = inverse(MODEL_NORMAL_MATRIX) * normalize(BINORMAL);
+
+    uv1_power_normal = pow(abs(normal), vec3(uv1_blend_sharpness));
+    uv1_triplanar_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz * uv1_scale + uv1_offset;
+    uv1_power_normal /= dot(uv1_power_normal, vec3(1.0));
+    uv1_triplanar_pos *= vec3(1.0, -1.0, 1.0);
+}
+
+// Reusable function to sample textures from all 3 axes
+vec4 triplanar_texture(sampler2D p_sampler, vec3 p_weights, vec3 p_triplanar_pos) {
+    vec4 samp = vec4(0.0);
+    samp += texture(p_sampler, p_triplanar_pos.xy) * p_weights.z;
+    samp += texture(p_sampler, p_triplanar_pos.xz) * p_weights.y;
+    samp += texture(p_sampler, p_triplanar_pos.zy * vec2(-1.0, 1.0)) * p_weights.x;
+    return samp;
+}
+
+void fragment() {
+    // 1. Triplanar Albedo
+    // Notice we use the custom function instead of texture()
+    vec4 albedo_tex = triplanar_texture(texture_albedo, uv1_power_normal, uv1_triplanar_pos);
+    vec3 final_color = albedo_tex.rgb;
+
+    // --- APPLY SMART POSTERIZATION ---
+    if (use_posterization) {
+        final_color = final_color + vec3(black_level_lift) * (1.0 - final_color);
+        float luminance = dot(final_color, vec3(0.299, 0.587, 0.114));
+        float stepped_luminance = floor(luminance * color_steps) / color_steps;
+        stepped_luminance = max(stepped_luminance, 0.1);
+        final_color = final_color * (stepped_luminance / max(luminance, 0.0001));
+    }
+
+    ALBEDO = albedo.rgb * final_color;
+
+    // 2. Triplanar Normal Map
+    NORMAL_MAP = triplanar_texture(texture_normal, uv1_power_normal, uv1_triplanar_pos).rgb;
+    NORMAL_MAP_DEPTH = normal_scale;
+
+    // 3. Triplanar AO Map
+    float ao_tex = triplanar_texture(texture_ambient_occlusion, uv1_power_normal, uv1_triplanar_pos).r;
+    toon_ao = mix(1.0, ao_tex, ao_strength);
+}
+
+void light() {
+    float NdotL = dot(NORMAL, LIGHT);
+
+    float light_intensity = smoothstep(shadow_threshold - shadow_softness, shadow_threshold + shadow_softness, NdotL);
+    float toon_attenuation = step(0.5, ATTENUATION);
+
+    float final_light = light_intensity * toon_attenuation * toon_ao;
+
+    vec3 diffuse = mix(shadow_color.rgb * ALBEDO, ALBEDO, final_light);
+
+    DIFFUSE_LIGHT += diffuse * LIGHT_COLOR;
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2cqfq"]
+render_priority = 0
+shader = SubResource("Shader_vivmo")
+shader_parameter/albedo = Color(1, 1, 1, 1)
+shader_parameter/texture_albedo = ExtResource("11_hhcpw")
+shader_parameter/use_posterization = true
+shader_parameter/color_steps = 6.0
+shader_parameter/black_level_lift = 0.0
+shader_parameter/texture_normal = ExtResource("13_xrxkg")
+shader_parameter/normal_scale = 1.0
+shader_parameter/texture_ambient_occlusion = ExtResource("12_mxvw5")
+shader_parameter/ao_strength = 1.0
+shader_parameter/shadow_color = Color(0.1, 0.35, 0.25, 1)
+shader_parameter/shadow_threshold = 0.07999997585983998
+shader_parameter/shadow_softness = 0.02
+shader_parameter/uv1_blend_sharpness = 1.0
+shader_parameter/uv1_scale = Vector3(0.75, 0.75, 0.75)
+shader_parameter/uv1_offset = Vector3(0, 0, 0)
+
+[node name="Main" type="Node3D" unique_id=1596504903]
+script = SubResource("GDScript_7mycd")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=962645623]
+transform = Transform3D(0.67770064, -0.47451958, 0.561741, 0.24080776, 0.8650135, 0.44018576, -0.69479036, -0.16304258, 0.7004882, -6.0267324, 5.398454, 4.788083)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=289171734]
+environment = SubResource("Environment_h2yge")
+
+[node name="Walls" type="StaticBody3D" parent="." unique_id=1180681055]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.009422302, 1.2896194, -0.010409594)
+visible = false
+
+[node name="Wall_North" type="CollisionShape3D" parent="Walls" unique_id=802472825]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 1.6459142)
+shape = SubResource("WorldBoundaryShape3D_0gdck")
+
+[node name="Wall_South" type="CollisionShape3D" parent="Walls" unique_id=1983771023]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, -1.6482817)
+shape = SubResource("WorldBoundaryShape3D_272bh")
+
+[node name="Wall_East" type="CollisionShape3D" parent="Walls" unique_id=689017880]
+transform = Transform3D(-4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 0, 1, -1.6479759, 0, 0)
+shape = SubResource("WorldBoundaryShape3D_5vw27")
+
+[node name="Wall_West" type="CollisionShape3D" parent="Walls" unique_id=1065456333]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 1.6490514, 0, 0)
+shape = SubResource("WorldBoundaryShape3D_kek77")
+
+[node name="Ground" type="StaticBody3D" parent="." unique_id=55730535 groups=["floor"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10.996, 0)
+visible = false
+collision_layer = 65
+
+[node name="Floor" type="CollisionShape3D" parent="Ground" unique_id=404199665 groups=["floor"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.011981487, -9.760466, -0.008972168)
+shape = SubResource("BoxShape3D_w48qg")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=63830099]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7395288, 1.2215165)
+use_collision = true
+collision_layer = 65
+size = Vector3(1, 0.9090576, 0.7709961)
+material = SubResource("ShaderMaterial_efxa6")
+
+[node name="XROrigin3D" type="XROrigin3D" parent="." unique_id=1366714441]
+transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, 0, 1.3678302, 0)
+
+[node name="HaloTracker" type="Node3D" parent="XROrigin3D" unique_id=995642536 node_paths=PackedStringArray("camera")]
+script = SubResource("GDScript_kek77")
+camera = NodePath("../XRCamera3D")
+
+[node name="SnapZone" parent="XROrigin3D/HaloTracker" unique_id=914804532 instance=ExtResource("2_j4qnp")]
+snap_require = "headwear"
+initial_object = NodePath("../../../Crown")
+
+[node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D" unique_id=2059489345]
+transform = Transform3D(1, 0, -6.3573026e-08, 0, 1, 0, 6.3573026e-08, 0, 1, -5.112627e-07, 1.7500001, 4.4696008e-14)
+current = true
+
+[node name="VRFadeQuad" type="MeshInstance3D" parent="XROrigin3D/XRCamera3D" unique_id=1042411774 groups=["fade_screen"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0352261e-09, 0, -0.011841606)
+mesh = SubResource("QuadMesh_hpdbv")
+
+[node name="Label3D" type="Label3D" parent="XROrigin3D/XRCamera3D/VRFadeQuad" unique_id=1823684307 groups=["game_over_text"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.1978386e-08, 0, -0.07932912)
+visible = false
+billboard = 1
+double_sided = false
+no_depth_test = true
+fixed_size = true
+texture_filter = 4
+render_priority = 5
+text = "GAME OVER"
+
+[node name="Left Hand" type="XRController3D" parent="XROrigin3D" unique_id=58297080]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.44468313, 1.1994554, -0.5254205)
+tracker = &"left_hand"
+
+[node name="LeftHand" parent="XROrigin3D/Left Hand" unique_id=90684513 instance=ExtResource("3_fpfj3")]
+
+[node name="FunctionPickup" parent="XROrigin3D/Left Hand" unique_id=1351637879 instance=ExtResource("4_sc1dx")]
+grab_collision_mask = 458756
+ranged_collision_mask = 196612
+
+[node name="Right Hand" type="XRController3D" parent="XROrigin3D" unique_id=401235397]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.445, 1.1993414, -0.525)
+tracker = &"right_hand"
+
+[node name="RightHand" parent="XROrigin3D/Right Hand" unique_id=490348228 instance=ExtResource("5_kjvhd")]
+
+[node name="FunctionPickup" parent="XROrigin3D/Right Hand" unique_id=1368903445 instance=ExtResource("4_sc1dx")]
+grab_collision_mask = 458756
+ranged_collision_mask = 458756
+
+[node name="PlayerBody" parent="XROrigin3D" unique_id=931623455 instance=ExtResource("6_5tuhn")]
+player_height_min = 1.5
+player_height_max = 2.0
+
+[node name="FireSlime" parent="." unique_id=639255984 instance=ExtResource("7_2gh4u")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -0.09567887, 2.3650322, 1.0375806)
+
+[node name="Crown" parent="." unique_id=2120035777 instance=ExtResource("8_devvj")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, 3.448, 0.06)
+
+[node name="MoatWater" type="Node3D" parent="." unique_id=1063133458]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.004339814, 0)
+
+[node name="Water_North" type="MeshInstance3D" parent="MoatWater" unique_id=28887212]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15333992, 1.8767128)
+mesh = SubResource("PlaneMesh_hpdbv")
+surface_material_override/0 = SubResource("ShaderMaterial_4c57u")
+
+[node name="Water_East" type="MeshInstance3D" parent="MoatWater" unique_id=1653358622]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -1.8723582, 0.15333992, -0.06185198)
+mesh = SubResource("PlaneMesh_hpdbv")
+surface_material_override/0 = SubResource("ShaderMaterial_4c57u")
+
+[node name="Water_South" type="MeshInstance3D" parent="MoatWater" unique_id=1571196556]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15333992, -1.867065)
+mesh = SubResource("PlaneMesh_hpdbv")
+surface_material_override/0 = SubResource("ShaderMaterial_4c57u")
+
+[node name="Water_West" type="MeshInstance3D" parent="MoatWater" unique_id=941903737]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 1.8595036, 0.15333992, -0.0013600588)
+mesh = SubResource("PlaneMesh_hpdbv")
+surface_material_override/0 = SubResource("ShaderMaterial_4c57u")
+
+[node name="Castle" parent="." unique_id=1700139227 instance=ExtResource("10_bg4s2")]
+
+[node name="Grassfield" type="StaticBody3D" parent="." unique_id=92508845 groups=["outside_floor"]]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0, 0.185, 0)
+collision_layer = 65
+
+[node name="Mesh" type="Node3D" parent="Grassfield" unique_id=415700113]
+
+[node name="Grass_North" type="CSGPolygon3D" parent="Grassfield/Mesh" unique_id=315834280]
+transform = Transform3D(-4.371139e-08, 1, 4.371139e-08, 0, -4.371139e-08, 1, 1, 4.371139e-08, 1.9106855e-15, -3.85, 0, -1.6828884e-07)
+polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
+depth = 0.3
+material = SubResource("ShaderMaterial_2cqfq")
+
+[node name="Grass_North2" type="CSGPolygon3D" parent="Grassfield/Mesh" unique_id=1782975715]
+transform = Transform3D(-1, -8.742278e-08, -3.821371e-15, 0, -4.371139e-08, 1, -8.742278e-08, 1, 4.371139e-08, 3.3657767e-07, 0, -3.85)
+polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
+depth = 0.3
+material = SubResource("ShaderMaterial_2cqfq")
+
+[node name="Grass_North3" type="CSGPolygon3D" parent="Grassfield/Mesh" unique_id=1277239075]
+transform = Transform3D(1.3113416e-07, -1, -4.371139e-08, 0, -4.371139e-08, 1, -1, -1.3113416e-07, -5.7320566e-15, 3.85, 0, 5.0486653e-07)
+polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
+depth = 0.3
+material = SubResource("ShaderMaterial_2cqfq")
+
+[node name="Grass_North4" type="CSGPolygon3D" parent="Grassfield/Mesh" unique_id=887959592]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 3.85)
+polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
+depth = 0.3
+material = SubResource("ShaderMaterial_2cqfq")
+
+[node name="Collision_North" type="CollisionPolygon3D" parent="Grassfield" unique_id=1976473820]
+transform = Transform3D(-4.371139e-08, 1, 4.371139e-08, 0, -4.371139e-08, 1, 1, 4.371139e-08, 1.9106855e-15, -3.85, -0.15, -1.6828884e-07)
+visible = false
+depth = 0.3
+polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
+
+[node name="Collision_East" type="CollisionPolygon3D" parent="Grassfield" unique_id=208070321]
+transform = Transform3D(-1, -8.742278e-08, -3.821371e-15, 0, -4.371139e-08, 1, -8.742278e-08, 1, 4.371139e-08, 3.3657767e-07, -0.15, -3.85)
+visible = false
+depth = 0.3
+polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
+
+[node name="South" type="CollisionPolygon3D" parent="Grassfield" unique_id=1067959272]
+transform = Transform3D(1.3113416e-07, -1, -4.371139e-08, 0, -4.371139e-08, 1, -1, -1.3113416e-07, -5.7320566e-15, 3.85, -0.15, 5.0486653e-07)
+visible = false
+depth = 0.3
+polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
+
+[node name="Collision_West" type="CollisionPolygon3D" parent="Grassfield" unique_id=1919347103]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, -0.15, 3.85)
+visible = false
+depth = 0.3
+polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
+
+[node name="GeoSlime" parent="." unique_id=1405803306 node_paths=PackedStringArray("target") instance=ExtResource("14_sqvbp")]
+transform = Transform3D(-0.24424413, 0, -0.9697138, 0, 1, 0, 0.9697138, 0, -0.24424413, 1.2924026, 1.536196, -1.2498133)
+target = NodePath("../XROrigin3D/HaloTracker/SnapZone")

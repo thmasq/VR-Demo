@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://n2jssaw6dr3q"]
+
+[ext_resource type="PackedScene" uid="uid://ce7vysyvondf8" path="res://addons/godot-xr-tools/objects/snap_zone.tscn" id="1_0rdol"]
+[ext_resource type="AudioStream" uid="uid://b5ebidiy88frb" path="res://sounds/snap.wav" id="2_j7qah"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_jjnhv"]
+resource_local_to_scene = true
+radius = 0.3
+
+[node name="CrownSnap" unique_id=914804532 groups=["headwear"] instance=ExtResource("1_0rdol")]
+stash_sound = ExtResource("2_j7qah")
+
+[node name="CollisionShape3D" parent="." index="0"]
+shape = SubResource("SphereShape3D_jjnhv")

@@ -1,0 +1,96 @@
+# Blender 5.1.2 MTL File: 'Castle.blend'
+# www.blender.org
+
+newmtl Bar
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.300000
+d 1.000000
+illum 2
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd textures/Poliigon_MetalBronzeWorn_7248_BaseColor.jpg
+map_Pm textures/Poliigon_MetalBronzeWorn_7248_Metallic.jpg
+map_Pr textures/Poliigon_MetalBronzeWorn_7248_Roughness.jpg
+map_Bump textures/Poliigon_MetalBronzeWorn_7248_Normal.png
+
+newmtl Bolt
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.300000
+d 1.000000
+illum 2
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd textures/MetalCorrodedHeavy001_COL_2K_METALNESS.jpg
+map_Pm textures/MetalCorrodedHeavy001_METALNESS_2K_METALNESS.jpg
+map_Pr textures/MetalCorrodedHeavy001_ROUGHNESS_2K_METALNESS.jpg
+map_Bump textures/MetalCorrodedHeavy001_NRM_2K_METALNESS.jpg
+
+newmtl Brick
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+Pr 0.500000
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.000000
+aniso 0.000000
+anisor 0.000000
+map_Kd textures/StoneBricksSplitface001_COL_2K.jpg
+
+newmtl Dirt
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Pr 0.500000
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd textures/GroundDirtRocky020_COL_2K.jpg
+
+newmtl Door
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd textures/medieval_wood_diff_4k.jpg
+map_Pr textures/medieval_wood_rough_4k.jpg
+map_Bump textures/medieval_wood_nor_gl_4k.png
+
+newmtl Material
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd textures/Poliigon_ConcretePaversSquare_7100_BaseColor.jpg
+map_Pm textures/Poliigon_ConcretePaversSquare_7100_Metallic.jpg
+map_Pr textures/Poliigon_ConcretePaversSquare_7100_Roughness.jpg
+map_Bump textures/Poliigon_ConcretePaversSquare_7100_Normal.png
