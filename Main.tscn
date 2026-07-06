@@ -206,7 +206,7 @@ shader_parameter/tile = Vector2(1.945, 5)
 shader_parameter/specular_color = Color(0, 0.09959153, 0.5667353, 1)
 shader_parameter/specular_threshold = 0.81999998167136
 shader_parameter/specular_softness = 0.01
-shader_parameter/edge_scale = 0.23999999463552
+shader_parameter/edge_scale = 0.1999999955296
 shader_parameter/edge_wobble_speed = 3.70000005513444
 shader_parameter/edge_wobble_size = 0.02999999932944
 shader_parameter/wave_layer_1 = SubResource("NoiseTexture2D_efxa6")
@@ -340,6 +340,8 @@ shader_parameter/uv1_blend_sharpness = 1.0
 shader_parameter/uv1_scale = Vector3(0.75, 0.75, 0.75)
 shader_parameter/uv1_offset = Vector3(0, 0, 0)
 
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_hpdbv"]
+
 [node name="Main" type="Node3D" unique_id=1596504903]
 script = SubResource("GDScript_7mycd")
 
@@ -414,6 +416,7 @@ fixed_size = true
 texture_filter = 4
 render_priority = 5
 text = "GAME OVER"
+font_size = 16
 
 [node name="Left Hand" type="XRController3D" parent="XROrigin3D" unique_id=58297080]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.44468313, 1.1994554, -0.5254205)
@@ -436,8 +439,6 @@ grab_collision_mask = 458756
 ranged_collision_mask = 458756
 
 [node name="PlayerBody" parent="XROrigin3D" unique_id=931623455 instance=ExtResource("6_5tuhn")]
-player_height_min = 1.5
-player_height_max = 2.0
 
 [node name="FireSlime" parent="." unique_id=639255984 instance=ExtResource("7_2gh4u")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -0.09567887, 2.3650322, 1.0375806)
@@ -500,30 +501,11 @@ polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
 depth = 0.3
 material = SubResource("ShaderMaterial_2cqfq")
 
-[node name="Collision_North" type="CollisionPolygon3D" parent="Grassfield" unique_id=1976473820]
-transform = Transform3D(-4.371139e-08, 1, 4.371139e-08, 0, -4.371139e-08, 1, 1, 4.371139e-08, 1.9106855e-15, -3.85, -0.15, -1.6828884e-07)
+[node name="Collision_Center" type="CollisionShape3D" parent="Grassfield" unique_id=1648506318]
 visible = false
-depth = 0.3
-polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
-
-[node name="Collision_East" type="CollisionPolygon3D" parent="Grassfield" unique_id=208070321]
-transform = Transform3D(-1, -8.742278e-08, -3.821371e-15, 0, -4.371139e-08, 1, -8.742278e-08, 1, 4.371139e-08, 3.3657767e-07, -0.15, -3.85)
-visible = false
-depth = 0.3
-polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
-
-[node name="South" type="CollisionPolygon3D" parent="Grassfield" unique_id=1067959272]
-transform = Transform3D(1.3113416e-07, -1, -4.371139e-08, 0, -4.371139e-08, 1, -1, -1.3113416e-07, -5.7320566e-15, 3.85, -0.15, 5.0486653e-07)
-visible = false
-depth = 0.3
-polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
-
-[node name="Collision_West" type="CollisionPolygon3D" parent="Grassfield" unique_id=1919347103]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, -0.15, 3.85)
-visible = false
-depth = 0.3
-polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
+shape = SubResource("WorldBoundaryShape3D_hpdbv")
 
 [node name="GeoSlime" parent="." unique_id=1405803306 node_paths=PackedStringArray("target") instance=ExtResource("14_sqvbp")]
 transform = Transform3D(-0.24424413, 0, -0.9697138, 0, 1, 0, 0.9697138, 0, -0.24424413, 1.2924026, 1.536196, -1.2498133)
-target = NodePath("../XROrigin3D/HaloTracker/SnapZone")
+target = NodePath("../Crown")
+steal_chance = null

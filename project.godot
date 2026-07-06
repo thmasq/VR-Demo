@@ -49,6 +49,7 @@ player/standard_height=1.75
 3d_physics/layer_4="Wall Walking"
 3d_physics/layer_5="Grappling Target"
 3d_physics/layer_7="floor"
+3d_physics/layer_8="Crown"
 3d_physics/layer_9="Headwear"
 3d_physics/layer_17="Held Objects"
 3d_physics/layer_18="Player Hands"

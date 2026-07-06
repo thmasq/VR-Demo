@@ -14,32 +14,46 @@ script/source = "@tool
 extends XRToolsPickable
 
 @export_category(\"Jump AI Settings\")
-@export var target: Node3D # Drag the PlayerBody, XRCamera3D, or Crown here
-@export var forward_force: float = 6.0
-@export var upward_force: float = 5.0
-@export var telegraph_duration: float = 0.8
-@export var inaccuracy_spread: float = 0.25 # Higher = less accurate jumps
+@export var target: Node3D
+@export var arc_height: float = 1.0
+@export var telegraph_duration: float = 0.2
+@export var steal_chance: float = 1.0
 
+var is_guaranteed_miss: bool = false
 enum State { IDLE, TELEGRAPHING, AIRBORNE }
 var current_state: State = State.IDLE
 
 @onready var jump_timer: Timer = Timer.new()
+@onready var doom_timer: Timer = Timer.new()
+@onready var mesh: MeshInstance3D = $GeoSlimeMesh
+@onready var snatch_area: Area3D = $SnatchArea
+@onready var crown_holder: Marker3D = $CrownHolder
+
+var anim_tween: Tween
+var base_mesh_scale: Vector3
+var has_stolen_crown: bool = false
+var stolen_crown: Node3D = null
+var leap_start_pos: Vector3
 
 func _ready() -> void:
-	super._ready() # Keep the XRTools pickable logic running
-	
-	if Engine.is_editor_hint(): return # Don't run AI in the editor
-	
-	# 1. Setup the telegraph timer
+	super._ready()
+
+	if Engine.is_editor_hint(): return
+
+	base_mesh_scale = mesh.scale
+
 	add_child(jump_timer)
 	jump_timer.one_shot = true
 	jump_timer.timeout.connect(_on_jump_timer_timeout)
-	
-	# 2. Connect the collision signal to detect landing
-	body_entered.connect(_on_body_entered)
 
-	# Temporary: Auto-jump every 4 seconds for testing purposes
-	# Later, you'll trigger start_telegraph() when the player is in range
+	add_child(doom_timer)
+	doom_timer.one_shot = true
+	doom_timer.timeout.connect(_on_doom_timer_timeout)
+
+	body_entered.connect(_on_body_entered)
+	if snatch_area:
+		snatch_area.body_entered.connect(_on_snatch_area_body_entered)
+
 	var test_timer = Timer.new()
 	add_child(test_timer)
 	test_timer.wait_time = 4.0
@@ -47,14 +61,24 @@ func _ready() -> void:
 	test_timer.start()
 
 func start_telegraph() -> void:
-	# Only jump if we are sitting still on the ground
 	if current_state != State.IDLE or not target: return
-	
+
 	current_state = State.TELEGRAPHING
-	
-	# TODO: Play a wind-up sound or squish animation here!
-	print(\"Slime is winding up...\")
-	
+
+	var target_pos = target.global_position
+	target_pos.y = mesh.global_position.y
+
+	var flipped_target = mesh.global_position + (mesh.global_position - target_pos)
+
+	mesh.look_at(flipped_target, Vector3.UP)
+
+	if anim_tween:
+		anim_tween.kill()
+	anim_tween = create_tween()
+
+	var squash_scale = base_mesh_scale * Vector3(1.4, 0.6, 1.4)
+	anim_tween.tween_property(mesh, \"scale\", squash_scale, telegraph_duration).set_trans(Tween.TRANS_SINE)
+
 	jump_timer.start(telegraph_duration)
 
 func _on_jump_timer_timeout() -> void:
@@ -62,37 +86,190 @@ func _on_jump_timer_timeout() -> void:
 
 func leap_at_target() -> void:
 	current_state = State.AIRBORNE
-	
-	# 1. Get the raw direction to the target
-	var dir_to_target = global_position.direction_to(target.global_position)
-	
-	# 2. Flatten the vector (ignore Y). We control height manually via upward_force
-	var horizontal_dir = Vector3(dir_to_target.x, 0, dir_to_target.z).normalized()
-	
-	# 3. Apply the \"Dodgeable\" inaccuracy spread
-	var random_offset = Vector3(
-		randf_range(-inaccuracy_spread, inaccuracy_spread),
-		0,
-		randf_range(-inaccuracy_spread, inaccuracy_spread)
-	)
-	var final_dir = (horizontal_dir + random_offset).normalized()
-	
-	# 4. Combine our forward aim and our upward arc
-	var impulse_vector = (final_dir * forward_force) + (Vector3.UP * upward_force)
-	
-	# 5. Launch! (Multiply by mass so heavier slimes jump consistently)
+
+	var gravity: float = ProjectSettings.get_setting(\"physics/3d/default_gravity\")
+	var start_pos = global_position
+	leap_start_pos = start_pos
+
+	var end_pos = target.global_position
+
+	is_guaranteed_miss = randf() > steal_chance
+
+	if is_guaranteed_miss:
+		var miss_direction = 1 if randf() > 0.5 else -1
+		var right_vector = target.global_transform.basis.x.normalized()
+		end_pos += right_vector * (1.5 * miss_direction)
+
+	var peak_y = max(start_pos.y, end_pos.y) + arc_height
+	var displacement_y_up = peak_y - start_pos.y
+
+	var velocity_y = sqrt(2.0 * gravity * displacement_y_up)
+
+	var time_up = velocity_y / gravity
+
+	var displacement_y_down = max(0.0, peak_y - end_pos.y)
+	var time_down = sqrt(2.0 * displacement_y_down / gravity)
+	var total_time = time_up + time_down
+
+	var displacement_xz = Vector3(end_pos.x - start_pos.x, 0, end_pos.z - start_pos.z)
+	var velocity_xz = displacement_xz / total_time
+
+	var impulse_vector = velocity_xz + Vector3(0, velocity_y, 0)
+
+	linear_velocity = Vector3.ZERO
 	apply_central_impulse(impulse_vector * mass)
-	
-	# Optional Polish: Add random spin so it flails in the air
-	var random_spin = Vector3(randf_range(-3, 3), randf_range(-3, 3), randf_range(-3, 3))
-	apply_torque_impulse(random_spin * mass)
+
+	if anim_tween:
+		anim_tween.kill()
+	anim_tween = create_tween()
+
+	var stretch_scale = base_mesh_scale * Vector3(0.7, 1.5, 0.7)
+	anim_tween.tween_property(mesh, \"scale\", stretch_scale, 0.1).set_trans(Tween.TRANS_SINE)
+	anim_tween.tween_property(mesh, \"scale\", base_mesh_scale, 0.2).set_trans(Tween.TRANS_SINE)
 
 func _on_body_entered(body: Node) -> void:
-	# When we hit the floor, reset the state so we can jump again
 	if current_state == State.AIRBORNE:
 		if body.is_in_group(\"floor\"):
 			current_state = State.IDLE
-			print(\"Slime landed!\")
+			if mesh:
+				if anim_tween:
+					anim_tween.kill()
+				mesh.scale = base_mesh_scale
+
+func _on_snatch_area_body_entered(body: Node) -> void:
+	if current_state != State.AIRBORNE or has_stolen_crown: return
+	if is_guaranteed_miss: return
+
+	if body.is_in_group(\"headwear\"):
+		call_deferred(\"steal_crown\", body)
+
+func steal_crown(crown: Node3D) -> void:
+	has_stolen_crown = true
+	stolen_crown = crown
+
+	set_collision_mask_value(1, true)
+
+	if \"enabled\" in crown:
+		crown.set(\"enabled\", false)
+
+	if crown.has_method(\"is_picked_up\") and crown.is_picked_up():
+		var holder = null
+
+		if crown.has_method(\"get_picked_up_by\"):
+			holder = crown.get_picked_up_by()
+		else:
+			holder = crown.get(\"picked_up_by\")
+	
+		if holder and holder.has_method(\"drop_object\"):
+			var holder_was_enabled = false
+	
+			if \"enabled\" in holder:
+				holder_was_enabled = holder.get(\"enabled\")
+				holder.set(\"enabled\", false)
+		
+			holder.drop_object()
+	
+			if \"enabled\" in holder:
+				holder.set(\"enabled\", holder_was_enabled)
+	
+	if crown is RigidBody3D:
+		crown.freeze = true
+
+	for child in crown.get_children():
+		if child is CollisionShape3D:
+			child.set_deferred(\"disabled\", true)
+	
+	if crown.get_parent():
+		crown.reparent(crown_holder, false)
+
+	crown.global_transform = crown_holder.global_transform
+
+	doom_timer.start(3.0)
+
+	ninja_jump_away()
+
+func ninja_jump_away() -> void:
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+
+	var gravity: float = ProjectSettings.get_setting(\"physics/3d/default_gravity\")
+	var start_pos = global_position
+
+	var dir_from_target = (leap_start_pos - target.global_position)
+	dir_from_target.y = 0
+	dir_from_target = dir_from_target.normalized()
+
+	var end_pos = target.global_position + (dir_from_target * 1.0)
+
+	var ninja_arc = arc_height * 1.0
+	var peak_y = max(start_pos.y, end_pos.y) + ninja_arc
+
+	var displacement_y_up = peak_y - start_pos.y
+	var velocity_y = sqrt(2.0 * gravity * displacement_y_up)
+
+	var time_up = velocity_y / gravity
+	var displacement_y_down = max(0.0, peak_y - end_pos.y)
+	var time_down = sqrt(2.0 * displacement_y_down / gravity)
+	var total_time = time_up + time_down
+
+	var displacement_xz = Vector3(end_pos.x - start_pos.x, 0, end_pos.z - start_pos.z)
+	var velocity_xz = displacement_xz / total_time
+
+	var impulse_vector = velocity_xz + Vector3(0, velocity_y, 0)
+	apply_central_impulse(impulse_vector * mass)
+
+func _on_doom_timer_timeout() -> void:
+	if not has_stolen_crown or not stolen_crown: 
+		melt_away()
+		return
+
+	set_collision_mask_value(1, false)
+
+	var main_world = get_tree().current_scene
+	stolen_crown.reparent(main_world, true)
+
+	if stolen_crown is RigidBody3D:
+		stolen_crown.freeze = false
+		var toss_impulse = Vector3(0, 12.0, 0) * stolen_crown.mass
+		stolen_crown.apply_central_impulse(toss_impulse)
+
+		stolen_crown.angular_velocity = Vector3(
+			randf_range(-4, 4), 
+			randf_range(-4, 4), 
+			randf_range(-4, 4)
+		)
+
+	for child in stolen_crown.get_children():
+		if child is CollisionShape3D:
+			child.set_deferred(\"disabled\", false)
+
+	if \"enabled\" in stolen_crown:
+		stolen_crown.enabled = true
+
+	has_stolen_crown = false
+	stolen_crown = null
+	
+	melt_away()
+
+func melt_away() -> void:
+	freeze = true
+	collision_layer = 0
+	collision_mask = 0
+	
+	if snatch_area:
+		snatch_area.set_deferred(\"monitoring\", false)
+		
+	current_state = State.IDLE
+	
+	if anim_tween:
+		anim_tween.kill()
+	anim_tween = create_tween()
+	
+	var puddle_scale = Vector3(base_mesh_scale.x * 1.5, 0.05, base_mesh_scale.z * 1.5)
+	
+	anim_tween.tween_property(mesh, \"scale\", puddle_scale, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	
+	anim_tween.finished.connect(queue_free)
 "
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_eeskg"]
@@ -240,7 +417,7 @@ blend_shape_mode = 0
 shadow_mesh = SubResource("ArrayMesh_apqlm")
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_hpdbv"]
-radius = 0.058060564
+radius = 0.2273573
 
 [node name="GeoSlime" unique_id=639255984 instance=ExtResource("1_tipk1")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
@@ -251,10 +428,10 @@ max_contacts_reported = 4
 linear_damp = 0.15
 angular_damp = 0.5
 script = SubResource("GDScript_s6ur2")
-forward_force = 6.0
-upward_force = 5.0
+arc_height = 1.0
 telegraph_duration = 0.8
-inaccuracy_spread = 0.25
+steal_chance = null
+picked_up_layer = 65664
 
 [node name="CollisionShape3D" parent="." index="0" groups=["outside_floor"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0068359375, 0.01171875, -0.00085449277)
@@ -277,6 +454,8 @@ metadata/_custom_type_script = "uid://dx3swqg2owe4p"
 
 [node name="SnatchArea" type="Area3D" parent="." index="4" unique_id=744313743]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.16915898, -0.07726495, 1.4788347e-08)
+collision_layer = 0
+collision_mask = 65664
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="SnatchArea" index="0" unique_id=1934439280]
 shape = SubResource("SphereShape3D_hpdbv")

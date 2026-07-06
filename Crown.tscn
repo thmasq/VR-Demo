@@ -310,10 +310,13 @@ blend_shape_mode = 0
 shadow_mesh = SubResource("ArrayMesh_n1r3v")
 
 [node name="Crown" unique_id=2120035777 groups=["headwear"] instance=ExtResource("1_jgb2w")]
+collision_layer = 132
 contact_monitor = true
 max_contacts_reported = 4
 script = SubResource("GDScript_4c57u")
 fade_duration = 3.0
+picked_up_layer = 65664
+second_hand_grab = 1
 
 [node name="CollisionShape3D" parent="." index="0"]
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, -0.007822946, -0.0023498535, 0)
