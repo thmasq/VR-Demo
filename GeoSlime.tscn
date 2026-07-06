@@ -430,7 +430,7 @@ angular_damp = 0.5
 script = SubResource("GDScript_s6ur2")
 arc_height = 1.0
 telegraph_duration = 0.8
-steal_chance = null
+steal_chance = 1.0
 picked_up_layer = 65664
 
 [node name="CollisionShape3D" parent="." index="0" groups=["outside_floor"]]

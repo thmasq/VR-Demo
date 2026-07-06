@@ -83,6 +83,9 @@ fog_depth_end = 500.0
 [sub_resource type="BoxShape3D" id="BoxShape3D_w48qg"]
 size = Vector3(3.3031616, 0.0993042, 3.3009033)
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_fpfj3"]
+size = Vector3(2.9990692, 1.028656, 3.000946)
+
 [sub_resource type="Shader" id="Shader_4c57u"]
 code = "shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back;
@@ -393,6 +396,10 @@ collision_layer = 65
 [node name="Floor" type="CollisionShape3D" parent="Ground" unique_id=404199665 groups=["floor"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.011981487, -9.760466, -0.008972168)
 shape = SubResource("BoxShape3D_w48qg")
+
+[node name="Floor2" type="CollisionShape3D" parent="Ground" unique_id=1679533288 groups=["floor"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0096850395, -10.323948, -0.008590698)
+shape = SubResource("BoxShape3D_fpfj3")
 
 [node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=63830099]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7395288, 1.2215165)

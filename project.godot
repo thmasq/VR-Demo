@@ -85,6 +85,7 @@ environment/glow/upscale_mode=0
 lights_and_shadows/tighter_shadow_caster_culling=false
 anti_aliasing/quality/screen_space_aa=2
 lights_and_shadows/positional_shadow/atlas_size=2048
+environment/tighter_shadow_caster_culling=true
 
 [xr]
 

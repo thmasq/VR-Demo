@@ -94,8 +94,7 @@ radius = 0.115722656
 
 [sub_resource type="Shader" id="Shader_yd3dr"]
 code = "shader_type spatial;
-// Standard mix, backface culling, no PBR lighting models
-render_mode blend_mix, depth_draw_opaque, cull_back;
+render_mode blend_mix, depth_draw_opaque, cull_back, depth_prepass_alpha;
 
 // --- BASE COLOR ---
 uniform vec4 albedo : source_color = vec4(0.6, 0.85, 0.95, 1.0); // Icy light blue
@@ -156,11 +155,8 @@ void light() {
 	// Multiply by light_intensity so the rim light doesn't glow artificially in the dark shadows
 	rim_intensity *= light_intensity; 
 
-	// 4. Output Final Light
-	DIFFUSE_LIGHT += diffuse * LIGHT_COLOR * ATTENUATION;
-	
-	// Add both the sharp specular dot and the frosty rim light to the specular output
-	SPECULAR_LIGHT += (spec_intensity * specular_color.rgb + rim_intensity * rim_color.rgb) * LIGHT_COLOR * ATTENUATION;
+DIFFUSE_LIGHT += diffuse * LIGHT_COLOR;
+SPECULAR_LIGHT += (spec_intensity * specular_color.rgb + rim_intensity * rim_color.rgb) * LIGHT_COLOR;
 }"
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_jgb2w"]

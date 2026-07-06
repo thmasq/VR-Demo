@@ -9,7 +9,7 @@
 [sub_resource type="Shader" id="Shader_vj4qq"]
 code = "shader_type spatial;
 // Removed PBR render modes. We just want a basic mix with back-culling.
-render_mode blend_mix, depth_draw_opaque, cull_back;
+render_mode blend_mix, depth_draw_opaque, cull_back, depth_prepass_alpha;
 
 // --- BASE PROPERTIES ---
 uniform vec4 albedo : source_color = vec4(0.2, 0.8, 0.4, 1.0);
@@ -65,8 +65,8 @@ void light() {
     spec_intensity *= light_intensity;
 
     // 5. Output the final custom light
-    DIFFUSE_LIGHT += diffuse * LIGHT_COLOR * ATTENUATION;
-    SPECULAR_LIGHT += spec_intensity * specular_color.rgb * LIGHT_COLOR * ATTENUATION;
+    DIFFUSE_LIGHT += diffuse * LIGHT_COLOR;
+    SPECULAR_LIGHT += spec_intensity * specular_color.rgb * LIGHT_COLOR;
 }"
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_cbo75"]
@@ -82,34 +82,34 @@ shader_parameter/specular_softness = 0.01
 shader_parameter/uv1_scale = Vector3(1, 1, 1)
 shader_parameter/uv1_offset = Vector3(0, 0, 0)
 
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_vj4qq"]
+animation = &"Grip"
+
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_cbo75"]
 animation = &"Grip"
 
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_4obwe"]
-animation = &"Grip"
-
-[sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_y7qwp"]
+[sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_4obwe"]
 filter_enabled = true
 filters = ["Armature/Skeleton3D:Little_Distal_L", "Armature/Skeleton3D:Little_Intermediate_L", "Armature/Skeleton3D:Little_Metacarpal_L", "Armature/Skeleton3D:Little_Proximal_L", "Armature/Skeleton3D:Middle_Distal_L", "Armature/Skeleton3D:Middle_Intermediate_L", "Armature/Skeleton3D:Middle_Metacarpal_L", "Armature/Skeleton3D:Middle_Proximal_L", "Armature/Skeleton3D:Ring_Distal_L", "Armature/Skeleton3D:Ring_Intermediate_L", "Armature/Skeleton3D:Ring_Metacarpal_L", "Armature/Skeleton3D:Ring_Proximal_L", "Armature/Skeleton3D:Thumb_Distal_L", "Armature/Skeleton3D:Thumb_Metacarpal_L", "Armature/Skeleton3D:Thumb_Proximal_L", "Armature/Skeleton:Little_Distal_L", "Armature/Skeleton:Little_Intermediate_L", "Armature/Skeleton:Little_Proximal_L", "Armature/Skeleton:Middle_Distal_L", "Armature/Skeleton:Middle_Intermediate_L", "Armature/Skeleton:Middle_Proximal_L", "Armature/Skeleton:Ring_Distal_L", "Armature/Skeleton:Ring_Intermediate_L", "Armature/Skeleton:Ring_Proximal_L", "Armature/Skeleton:Thumb_Distal_L", "Armature/Skeleton:Thumb_Proximal_L"]
 
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_0qsn2"]
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_y7qwp"]
 animation = &"Grip 5"
 
-[sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_hwtfy"]
+[sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_0qsn2"]
 filter_enabled = true
 filters = ["Armature/Skeleton3D:Index_Distal_L", "Armature/Skeleton3D:Index_Intermediate_L", "Armature/Skeleton3D:Index_Metacarpal_L", "Armature/Skeleton3D:Index_Proximal_L", "Armature/Skeleton:Index_Distal_L", "Armature/Skeleton:Index_Intermediate_L", "Armature/Skeleton:Index_Proximal_L"]
 
-[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_ppujx"]
-graph_offset = Vector2(-712.3292, 17.515717)
-nodes/ClosedHand1/node = SubResource("AnimationNodeAnimation_cbo75")
+[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_hwtfy"]
+graph_offset = Vector2(-536, 11)
+nodes/ClosedHand1/node = SubResource("AnimationNodeAnimation_vj4qq")
 nodes/ClosedHand1/position = Vector2(-600, 300)
-nodes/ClosedHand2/node = SubResource("AnimationNodeAnimation_4obwe")
+nodes/ClosedHand2/node = SubResource("AnimationNodeAnimation_cbo75")
 nodes/ClosedHand2/position = Vector2(-360, 300)
-nodes/Grip/node = SubResource("AnimationNodeBlend2_y7qwp")
+nodes/Grip/node = SubResource("AnimationNodeBlend2_4obwe")
 nodes/Grip/position = Vector2(0, 20)
-nodes/OpenHand/node = SubResource("AnimationNodeAnimation_0qsn2")
+nodes/OpenHand/node = SubResource("AnimationNodeAnimation_y7qwp")
 nodes/OpenHand/position = Vector2(-600, 100)
-nodes/Trigger/node = SubResource("AnimationNodeBlend2_hwtfy")
+nodes/Trigger/node = SubResource("AnimationNodeBlend2_0qsn2")
 nodes/Trigger/position = Vector2(-360, 20)
 node_connections = [&"output", 0, &"Grip", &"Grip", 0, &"Trigger", &"Grip", 1, &"ClosedHand2", &"Trigger", 0, &"OpenHand", &"Trigger", 1, &"ClosedHand1"]
 
@@ -121,7 +121,7 @@ default_pose = ExtResource("3_wyae6")
 [node name="Hand_low_L" parent="." unique_id=1169888916 instance=ExtResource("2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.01, 0, 0.05)
 
-[node name="Skeleton3D" parent="Hand_low_L/Armature" parent_id_path=PackedInt32Array(1169888916, 2036774527) index="0" unique_id=650456894]
+[node name="Skeleton3D" parent="Hand_low_L/Armature" parent_id_path=PackedInt32Array(1169888916, 995564826) index="0" unique_id=1884946914]
 bones/1/rotation = Quaternion(0.323537, -2.5658142e-05, -0.027220426, 0.9458239)
 bones/2/rotation = Quaternion(-0.09044407, -0.04151748, -0.16629349, 0.98104167)
 bones/3/rotation = Quaternion(-0.04661986, 0.02097099, 0.010327632, 0.9986392)
@@ -142,14 +142,14 @@ bones/21/rotation = Quaternion(-0.06251818, -0.00022572002, -0.115392834, 0.9913
 bones/22/rotation = Quaternion(0.058578636, 0.021648303, -0.26990518, 0.9608596)
 bones/23/rotation = Quaternion(0.006871769, -0.0035727466, -0.21195254, 0.97724926)
 
-[node name="mesh_Hand_low_L" parent="Hand_low_L/Armature/Skeleton3D" index="0" unique_id=707872481]
+[node name="mesh_Hand_low_L" parent="Hand_low_L/Armature/Skeleton3D" index="0" unique_id=1640587487]
 surface_material_override/0 = SubResource("ShaderMaterial_cbo75")
 
 [node name="AnimationPlayer" parent="Hand_low_L" unique_id=1530144367 instance=ExtResource("1")]
 
 [node name="AnimationTree" type="AnimationTree" parent="." unique_id=1313849232]
 root_node = NodePath("../Hand_low_L")
-tree_root = SubResource("AnimationNodeBlendTree_ppujx")
+tree_root = SubResource("AnimationNodeBlendTree_hwtfy")
 anim_player = NodePath("../Hand_low_L/AnimationPlayer")
 parameters/Grip/blend_amount = 0.0
 parameters/Trigger/blend_amount = 0.0
