@@ -4,9 +4,11 @@
 [ext_resource type="PackedScene" uid="uid://n2jssaw6dr3q" path="res://CrownSnap.tscn" id="2_j4qnp"]
 [ext_resource type="PackedScene" uid="uid://bq86r4yll8po" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/left_fullglove_low.tscn" id="3_fpfj3"]
 [ext_resource type="PackedScene" uid="uid://b4ysuy43poobf" path="res://addons/godot-xr-tools/functions/function_pickup.tscn" id="4_sc1dx"]
+[ext_resource type="PackedScene" uid="uid://bl2nuu3qhlb5k" path="res://addons/godot-xr-tools/functions/movement_direct.tscn" id="5_fpfj3"]
 [ext_resource type="PackedScene" uid="uid://xqimcf20s2jp" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/right_fullglove_low.tscn" id="5_kjvhd"]
 [ext_resource type="PackedScene" uid="uid://diyu06cw06syv" path="res://addons/godot-xr-tools/player/player_body.tscn" id="6_5tuhn"]
 [ext_resource type="PackedScene" uid="uid://dwu4wcg57030f" path="res://FireSlime.tscn" id="7_2gh4u"]
+[ext_resource type="PackedScene" uid="uid://b6bk2pj8vbj28" path="res://addons/godot-xr-tools/functions/movement_turn.tscn" id="7_sc1dx"]
 [ext_resource type="PackedScene" uid="uid://bw4jjk4lipmct" path="res://Crown.tscn" id="8_devvj"]
 [ext_resource type="Shader" uid="uid://jrwysjg2cuq0" path="res://water.gdshader" id="9_3b0ty"]
 [ext_resource type="PackedScene" uid="uid://dqsfneiny05qe" path="res://Castle.tscn" id="10_bg4s2"]
@@ -51,15 +53,21 @@ sky = SubResource("Sky_7mycd")
 sky_rotation = Vector3(0, 1.3089969, 0)
 ambient_light_source = 3
 ambient_light_color = Color(1, 1, 1, 1)
-reflected_light_source = 2
+reflected_light_source = 1
+tonemap_mode = 3
 ssao_enabled = true
-ssao_intensity = 3.0
-ssil_enabled = true
+ssao_detail = 1.0
+ssil_radius = 16.0
 sdfgi_enabled = true
+sdfgi_use_occlusion = true
+sdfgi_y_scale = 0
+glow_enabled = true
+glow_normalized = true
+glow_intensity = 0.2
 fog_enabled = true
 fog_mode = 1
 fog_density = 1.0
-fog_sky_affect = 0.774
+fog_sky_affect = 0.15
 fog_depth_curve = 1.8660669
 fog_depth_begin = 100.0
 fog_depth_end = 500.0
@@ -346,7 +354,13 @@ shader_parameter/uv1_offset = Vector3(0, 0, 0)
 script = SubResource("GDScript_7mycd")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=962645623]
-transform = Transform3D(0.67770064, -0.47451958, 0.561741, 0.24080776, 0.8650135, 0.44018576, -0.69479036, -0.16304258, 0.7004882, -6.0267324, 5.398454, 4.788083)
+transform = Transform3D(0.4542959, -0.58970875, 0.6677264, 0.29098323, 0.8066539, 0.5144298, -0.8419879, -0.039406177, 0.538055, 7.1308703, 5.398454, 4.788083)
+light_volumetric_fog_energy = 0.0
+light_bake_mode = 1
+shadow_enabled = true
+shadow_reverse_cull_face = true
+shadow_blur = 0.0
+directional_shadow_max_distance = 15.0
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=289171734]
 environment = SubResource("Environment_h2yge")
@@ -382,6 +396,8 @@ shape = SubResource("BoxShape3D_w48qg")
 
 [node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=63830099]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7395288, 1.2215165)
+lod_bias = 0.001
+autosmooth = true
 use_collision = true
 collision_layer = 65
 size = Vector3(1, 0.9090576, 0.7709961)
@@ -428,6 +444,10 @@ tracker = &"left_hand"
 grab_collision_mask = 458756
 ranged_collision_mask = 196612
 
+[node name="MovementDirect" parent="XROrigin3D/Left Hand" unique_id=1365295484 instance=ExtResource("5_fpfj3")]
+max_speed = 2.0
+strafe = true
+
 [node name="Right Hand" type="XRController3D" parent="XROrigin3D" unique_id=401235397]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.445, 1.1993414, -0.525)
 tracker = &"right_hand"
@@ -438,7 +458,11 @@ tracker = &"right_hand"
 grab_collision_mask = 458756
 ranged_collision_mask = 458756
 
+[node name="MovementTurn" parent="XROrigin3D/Right Hand" unique_id=450280775 instance=ExtResource("7_sc1dx")]
+step_turn_angle = 30.0
+
 [node name="PlayerBody" parent="XROrigin3D" unique_id=931623455 instance=ExtResource("6_5tuhn")]
+slide_on_ceiling = false
 
 [node name="FireSlime" parent="." unique_id=639255984 instance=ExtResource("7_2gh4u")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -0.09567887, 2.3650322, 1.0375806)
@@ -508,4 +532,4 @@ shape = SubResource("WorldBoundaryShape3D_hpdbv")
 [node name="GeoSlime" parent="." unique_id=1405803306 node_paths=PackedStringArray("target") instance=ExtResource("14_sqvbp")]
 transform = Transform3D(-0.24424413, 0, -0.9697138, 0, 1, 0, 0.9697138, 0, -0.24424413, 1.2924026, 1.536196, -1.2498133)
 target = NodePath("../Crown")
-steal_chance = null
+steal_chance = 1.0

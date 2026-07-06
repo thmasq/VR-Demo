@@ -27,6 +27,12 @@ XRToolsUserSettings="*uid://bqgb8i74tm0t"
 XRToolsRumbleManager="*uid://by853dk86g1qw"
 XrSimulator="*uid://ctltchlf2j2r4"
 
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/vsync/vsync_mode=2
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/godot-xr-tools/plugin.cfg")
@@ -66,7 +72,19 @@ player/standard_height=1.75
 
 [rendering]
 
-rendering_device/driver.windows="d3d12"
+lights_and_shadows/directional_shadow/size=8192
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
+lights_and_shadows/positional_shadow/soft_shadow_filter_quality=0
+shader_compiler/shader_cache/strip_debug=true
+reflections/specular_occlusion/enabled=false
+camera/depth_of_field/depth_of_field_bokeh_quality=0
+environment/ssao/quality=1
+environment/ssao/half_size=false
+environment/ssil/quality=0
+environment/glow/upscale_mode=0
+lights_and_shadows/tighter_shadow_caster_culling=false
+anti_aliasing/quality/screen_space_aa=2
+lights_and_shadows/positional_shadow/atlas_size=2048
 
 [xr]
 
