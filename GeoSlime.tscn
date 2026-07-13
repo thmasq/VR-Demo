@@ -39,6 +39,9 @@ func _ready() -> void:
 	super._ready()
 
 	if Engine.is_editor_hint(): return
+	
+	contact_monitor = true
+	max_contacts_reported = 5 
 
 	base_mesh_scale = mesh.scale
 
@@ -62,6 +65,15 @@ func _ready() -> void:
 
 func start_telegraph() -> void:
 	if current_state != State.IDLE or not target: return
+
+	var is_on_valid_floor = false
+	for body in get_colliding_bodies():
+		if body.is_in_group(\"floor\") and body.name != \"outside_floor\":
+			is_on_valid_floor = true
+			break
+			
+	if not is_on_valid_floor:
+		return
 
 	current_state = State.TELEGRAPHING
 

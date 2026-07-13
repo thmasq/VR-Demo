@@ -1,0 +1,82 @@
+[gd_scene format=3 uid="uid://gp77tmpor3f0"]
+
+[ext_resource type="ArrayMesh" uid="uid://myuq05dme1fp" path="res://assets/Ladder/ladder.obj" id="1_t351p"]
+
+[sub_resource type="Shader" id="Shader_4c57u"]
+code = "shader_type spatial;
+render_mode blend_mix, depth_draw_opaque, cull_back;
+
+// --- BASE COLOR ---
+uniform vec4 albedo : source_color = vec4(0.8, 0.65, 0.45, 1.0); // Warm Kraft Paper Tan
+uniform sampler2D texture_albedo : source_color, filter_linear_mipmap, repeat_enable;
+
+// NEW: This threshold forces the material into the Opaque pipeline, fixing your depth bug!
+uniform float alpha_scissor_threshold : hint_range(0.0, 1.0) = 0.5;
+
+// --- CEL SHADING SHADOWS ---
+uniform vec4 shadow_color : source_color = vec4(0.5, 0.35, 0.2, 1.0); // Darker, warm brown
+uniform float shadow_threshold : hint_range(-1.0, 1.0, 0.01) = 0.0;
+uniform float shadow_softness : hint_range(0.0, 1.0, 0.01) = 0.05; 
+
+// --- AMBIENT OCCLUSION ---
+uniform sampler2D texture_ao : hint_default_white, filter_linear_mipmap, repeat_enable;
+uniform float ao_strength : hint_range(0.0, 1.0, 0.01) = 1.0;
+
+uniform vec3 uv1_scale = vec3(1.0);
+uniform vec3 uv1_offset = vec3(0.0);
+
+// Varying to pass AO data from fragment to light function
+varying float toon_ao;
+
+void vertex() {
+    UV = UV * uv1_scale.xy + uv1_offset.xy;
+}
+
+void fragment() {
+    vec2 base_uv = UV;
+    vec4 albedo_tex = texture(texture_albedo, base_uv);
+    
+    ALBEDO = albedo.rgb * albedo_tex.rgb;
+    
+    // --- THE DEPTH FIX ---
+    ALPHA = albedo.a * albedo_tex.a;
+    ALPHA_SCISSOR_THRESHOLD = alpha_scissor_threshold; 
+    // (Note: If your cardboard never has holes, you can completely delete 
+    // the ALPHA and ALPHA_SCISSOR_THRESHOLD lines to make it purely opaque)
+
+    // --- THE AO SETUP ---
+    toon_ao = mix(1.0, texture(texture_ao, base_uv).r, ao_strength);
+}
+
+void light() {
+    float NdotL = dot(NORMAL, LIGHT);
+
+    // --- APPLY THE AO HACK ---
+    // Multiply light direction by AO to force crevices into the stylized shadow
+    float adjusted_light = NdotL * toon_ao;
+
+    float light_intensity = smoothstep(shadow_threshold - shadow_softness, shadow_threshold + shadow_softness, adjusted_light);
+
+    vec3 diffuse = mix(shadow_color.rgb * ALBEDO, ALBEDO, light_intensity);
+
+    DIFFUSE_LIGHT += diffuse * LIGHT_COLOR * ATTENUATION;
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_s54ic"]
+render_priority = 0
+shader = SubResource("Shader_4c57u")
+shader_parameter/albedo = Color(0.042919345, 0.35730085, 0.53810245, 1)
+shader_parameter/alpha_scissor_threshold = 0.5
+shader_parameter/shadow_color = Color(0.27773106, 0.06513145, 0.6322595, 1)
+shader_parameter/shadow_threshold = -2.2352000028647012e-08
+shader_parameter/shadow_softness = 0.05
+shader_parameter/ao_strength = 1.0
+shader_parameter/uv1_scale = Vector3(1, 1, 1)
+shader_parameter/uv1_offset = Vector3(0, 0, 0)
+
+[node name="Ladder" type="Node3D" unique_id=519417918]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=693246956]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.105, -0.16, 0)
+mesh = ExtResource("1_t351p")
+surface_material_override/0 = SubResource("ShaderMaterial_s54ic")

@@ -514,19 +514,19 @@ polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
 depth = 0.3
 material = SubResource("ShaderMaterial_2cqfq")
 
-[node name="Grass_North2" type="CSGPolygon3D" parent="Grassfield/Mesh" unique_id=1782975715]
+[node name="Grass_East" type="CSGPolygon3D" parent="Grassfield/Mesh" unique_id=1782975715]
 transform = Transform3D(-1, -8.742278e-08, -3.821371e-15, 0, -4.371139e-08, 1, -8.742278e-08, 1, 4.371139e-08, 3.3657767e-07, 0, -3.85)
 polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
 depth = 0.3
 material = SubResource("ShaderMaterial_2cqfq")
 
-[node name="Grass_North3" type="CSGPolygon3D" parent="Grassfield/Mesh" unique_id=1277239075]
+[node name="Grass_South" type="CSGPolygon3D" parent="Grassfield/Mesh" unique_id=1277239075]
 transform = Transform3D(1.3113416e-07, -1, -4.371139e-08, 0, -4.371139e-08, 1, -1, -1.3113416e-07, -5.7320566e-15, 3.85, 0, 5.0486653e-07)
 polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
 depth = 0.3
 material = SubResource("ShaderMaterial_2cqfq")
 
-[node name="Grass_North4" type="CSGPolygon3D" parent="Grassfield/Mesh" unique_id=887959592]
+[node name="Grass_West" type="CSGPolygon3D" parent="Grassfield/Mesh" unique_id=887959592]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 3.85)
 polygon = PackedVector2Array(-503.85, -500, -2.5, 1.35, 2.5, 1.35, 503.85, -500)
 depth = 0.3
@@ -537,6 +537,5 @@ visible = false
 shape = SubResource("WorldBoundaryShape3D_hpdbv")
 
 [node name="GeoSlime" parent="." unique_id=1405803306 node_paths=PackedStringArray("target") instance=ExtResource("14_sqvbp")]
-transform = Transform3D(-0.24424413, 0, -0.9697138, 0, 1, 0, 0.9697138, 0, -0.24424413, 1.2924026, 1.536196, -1.2498133)
+transform = Transform3D(-0.24424413, 0, -0.9697138, 0, 1, 0, 0.9697138, 0, -0.24424413, 1.2172982, 1.536196, -1.2498133)
 target = NodePath("../Crown")
-steal_chance = 1.0
