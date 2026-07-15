@@ -110,7 +110,9 @@ func navigate_to_target(_delta: float) -> void:
 			
 			freeze = true
 			global_position = target_marker.global_position
-			look_at(global_position - target_marker.global_transform.basis.z, Vector3.UP)
+			
+			global_transform.basis = target_marker.global_transform.basis
+			rotate_y(PI)
 
 	var next_path_pos: Vector3 = nav_agent.get_next_path_position()
 	var current_pos: Vector3 = global_position
@@ -127,30 +129,20 @@ func navigate_to_target(_delta: float) -> void:
 		_on_velocity_computed(desired_velocity)
 
 func _on_velocity_computed(safe_velocity: Vector3) -> void:
-	# Allow movement if we are moving to the wall OR moving to the queue
 	if is_picked_up() or not (current_state == State.MOVING_TO_WALL or current_state == State.MOVING_TO_QUEUE):
 		return
 
-	# 1. Apply the safe velocity to our physics body, keeping gravity
 	linear_velocity = Vector3(safe_velocity.x, linear_velocity.y, safe_velocity.z)
 
-	# 2. Rotate the mesh toward the safe direction
 	var direction = safe_velocity
 	direction.y = 0
 	direction = direction.normalized()
 
 	if direction.length_squared() > 0.01:
-		var target_look: Vector3 = mesh.global_position + direction
-		var current_scale = mesh.scale
-		var original_rotation = mesh.global_transform.basis.orthonormalized()
-
-		mesh.look_at(target_look, Vector3.UP)
-
-		var target_rotation = mesh.global_transform.basis.orthonormalized()
-		var new_rotation = original_rotation.slerp(target_rotation, turn_speed * get_physics_process_delta_time())
-
-		mesh.global_transform.basis = new_rotation
-		mesh.scale = current_scale
+		var visual_forward = global_transform.basis.x 
+		
+		var angle_diff = visual_forward.signed_angle_to(direction, Vector3.UP)
+		angular_velocity.y = angle_diff * turn_speed
 
 
 func place_ladder_on_wall() -> void:
@@ -204,6 +196,7 @@ func reset_to_idle() -> void:
 		if anim_tween:
 			anim_tween.kill()
 		mesh.scale = base_mesh_scale
+		mesh.rotation = Vector3.ZERO
 
 
 func start_telegraph() -> void:
@@ -563,7 +556,6 @@ shadow_mesh = SubResource("ArrayMesh_apqlm")
 radius = 0.08879755
 
 [node name="GeoSlimeWithLadder" unique_id=639255984 instance=ExtResource("1_xg1cp")]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
 collision_mask = 196678
 physics_material_override = SubResource("PhysicsMaterial_50oqk")
 contact_monitor = true
@@ -583,7 +575,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0068359375, 0.01171875, -0
 shape = SubResource("BoxShape3D_eeskg")
 
 [node name="GeoSlimeMesh" type="MeshInstance3D" parent="." index="1" unique_id=1649373892]
-transform = Transform3D(-1.3113418e-08, 0, 0.29999998, 0, 0.29999998, 0, -0.29999998, 0, -1.3113418e-08, 0, 0, 0)
+transform = Transform3D(-1.3113416e-08, 0, 0.29999998, 0, 0.29999998, 0, -0.29999998, 0, -1.3113416e-08, 0, 0, 0)
 mesh = SubResource("ArrayMesh_a1cty")
 
 [node name="GripPointLeft" type="Marker3D" parent="." index="2" unique_id=683026074]

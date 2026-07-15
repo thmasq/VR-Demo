@@ -67,14 +67,12 @@ sdfgi_min_cell_size = 10.975489
 sdfgi_y_scale = 0
 glow_normalized = true
 glow_intensity = 0.2
-fog_enabled = true
 fog_mode = 1
 fog_density = 1.0
 fog_sky_affect = 0.96
 fog_depth_curve = 1.8025018
 fog_depth_begin = 0.0
 fog_depth_end = 50.0
-volumetric_fog_enabled = true
 volumetric_fog_density = 0.01
 volumetric_fog_albedo = Color(0.88, 0.82984, 0.7216, 1)
 volumetric_fog_gi_inject = 2.0
@@ -523,13 +521,13 @@ material = SubResource("ShaderMaterial_2cqfq")
 
 [node name="Grass_South" type="CSGPolygon3D" parent="Grassfield/Mesh" unique_id=1277239075]
 transform = Transform3D(1.3113416e-07, -1, -4.371139e-08, 0, -4.371139e-08, 1, -1, -1.3113416e-07, -5.7320566e-15, 3.85, 0, 5.0486653e-07)
-polygon = PackedVector2Array(-503.85, -500, -2.108554, 1.7393918, 2.1131372, 1.7394524, 503.85, -500)
+polygon = PackedVector2Array(-503.85, -500, -2.1066904, 1.7408259, 2.1131372, 1.7394524, 503.85, -500)
 depth = 0.3
 material = SubResource("ShaderMaterial_2cqfq")
 
 [node name="Grass_West" type="CSGPolygon3D" parent="Grassfield/Mesh" unique_id=887959592]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -0.00078368187, 0.0049790144, 3.8502698)
-polygon = PackedVector2Array(-503.85, -500, -2.1114223, 1.7414544, 2.1100857, 1.7413886, 503.85, -500)
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -0.001, 0, 3.85)
+polygon = PackedVector2Array(-503.85, -500, -2.1114223, 1.7414544, 2.1093135, 1.7420957, 503.85, -500)
 depth = 0.3
 material = SubResource("ShaderMaterial_2cqfq")
 

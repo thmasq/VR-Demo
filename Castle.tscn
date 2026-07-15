@@ -16,6 +16,7 @@
 [ext_resource type="Texture2D" uid="uid://c8g7501ew65nt" path="res://textures/Poliigon_MetalBronzeWorn_7248_Normal.png" id="9_s2vic"]
 [ext_resource type="PackedScene" uid="uid://dwu4wcg57030f" path="res://FireSlime.tscn" id="14_a1lj3"]
 [ext_resource type="Script" uid="uid://bxic8p4vvnua2" path="res://InvasionSpawner.gd" id="16_f2n1j"]
+[ext_resource type="PackedScene" uid="uid://gp77tmpor3f0" path="res://Ladder.tscn" id="16_fq4eb"]
 [ext_resource type="PackedScene" uid="uid://7th10l01h0xa" path="res://GeoSlimeWithLadder.tscn" id="17_tn6p7"]
 [ext_resource type="PackedScene" uid="uid://bfvn217w1kdr5" path="res://GeoSlime.tscn" id="18_fq4eb"]
 
@@ -1279,6 +1280,9 @@ transform = Transform3D(1, 0, -3.5527137e-15, 0, 0.924546, -0.38107035, 0, 0.381
 
 [node name="WestMiddle" type="Marker3D" parent="LadderClimbingSpots" index="9" unique_id=770858783]
 transform = Transform3D(-4.371139e-08, -0.38107035, -0.924546, 0, 0.924546, -0.38107035, 1, -1.6657113e-08, -4.0413195e-08, 2.1249025, 0.18587461, 0.01899562)
+
+[node name="Ladder" parent="LadderClimbingSpots/WestMiddle" index="0" unique_id=519417918 instance=ExtResource("16_fq4eb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
 [node name="WestLeft" type="Marker3D" parent="LadderClimbingSpots" index="10" unique_id=827557736]
 transform = Transform3D(-4.371139e-08, -0.38107035, -0.924546, 0, 0.924546, -0.38107035, 1, -1.6657113e-08, -4.0413195e-08, 2.1249025, 0.18587461, 1.2187632)
