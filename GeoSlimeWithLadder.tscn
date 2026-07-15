@@ -32,7 +32,9 @@ enum State {
 	AIRBORNE, 
 	MOVING_TO_WALL, 
 	PLACING_LADDER, 
-	MOVING_TO_QUEUE 
+	MOVING_TO_QUEUE,
+	WAITING_IN_QUEUE,
+	JUMPING_QUEUE
 }
 var current_state: State = State.IDLE
 
@@ -45,6 +47,9 @@ var current_state: State = State.IDLE
 @onready var ladder: Node3D = get_node_or_null(\"Ladder\")
 
 var anim_tween: Tween
+var jump_tween_h: Tween
+var jump_tween_v: Tween
+
 var base_mesh_scale: Vector3
 var has_stolen_crown: bool = false
 var stolen_crown: Node3D = null
@@ -52,6 +57,7 @@ var leap_start_pos: Vector3
 
 var invasion_manager: InvasionManager
 var target_marker: Marker3D = null
+var is_jumping_to_wall: bool = false
 
 func _ready() -> void:
 	super._ready()
@@ -75,6 +81,11 @@ func _ready() -> void:
 	if snatch_area:
 		snatch_area.body_entered.connect(_on_snatch_area_body_entered)
 
+	if has_signal(\"picked_up\"):
+		picked_up.connect(_on_picked_up)
+	if has_signal(\"dropped\"):
+		dropped.connect(_on_dropped)
+
 	var test_timer = Timer.new()
 	add_child(test_timer)
 	test_timer.wait_time = 4.0
@@ -82,6 +93,14 @@ func _ready() -> void:
 	test_timer.start()
 
 	nav_agent.velocity_computed.connect(_on_velocity_computed)
+
+func _on_picked_up(_pickable) -> void:
+	if jump_tween_h and jump_tween_h.is_valid(): jump_tween_h.kill()
+	if jump_tween_v and jump_tween_v.is_valid(): jump_tween_v.kill()
+	if anim_tween and anim_tween.is_valid(): anim_tween.kill()
+
+func _on_dropped(_pickable) -> void:
+	freeze = false
 
 func _physics_process(delta: float) -> void:
 	if is_picked_up(): 
@@ -91,7 +110,7 @@ func _physics_process(delta: float) -> void:
 		navigate_to_target(delta)
 
 func start_ladder_placement_sequence() -> void:
-	if not invasion_manager or current_state in [State.MOVING_TO_WALL, State.PLACING_LADDER, State.MOVING_TO_QUEUE]: 
+	if not invasion_manager or current_state in [State.MOVING_TO_WALL, State.PLACING_LADDER, State.MOVING_TO_QUEUE, State.WAITING_IN_QUEUE, State.JUMPING_QUEUE]: 
 		return
 	
 	if target_marker == null and is_instance_valid(ladder) and ladder.get_parent() == self:
@@ -101,18 +120,28 @@ func start_ladder_placement_sequence() -> void:
 			nav_agent.target_position = target_marker.global_position
 			current_state = State.MOVING_TO_WALL
 
+func start_queue_navigation_sequence() -> void:
+	if not invasion_manager or current_state in [State.MOVING_TO_WALL, State.PLACING_LADDER, State.MOVING_TO_QUEUE, State.WAITING_IN_QUEUE, State.JUMPING_QUEUE]:
+		return
+
+	target_marker = invasion_manager.claim_closest_queue_spot(self)
+
+	if target_marker:
+		nav_agent.target_position = target_marker.global_position
+		current_state = State.MOVING_TO_QUEUE
+	else:
+		current_state = State.IDLE
+		get_tree().create_timer(1.5).timeout.connect(start_queue_navigation_sequence)
+
 func navigate_to_target(_delta: float) -> void:
 	if nav_agent.is_navigation_finished():
 		if current_state == State.MOVING_TO_WALL:
 			place_ladder_on_wall()
 		elif current_state == State.MOVING_TO_QUEUE:
-			current_state = State.IDLE
-			
-			freeze = true
-			global_position = target_marker.global_position
-			
-			global_transform.basis = target_marker.global_transform.basis
-			rotate_y(PI)
+			current_state = State.WAITING_IN_QUEUE
+			snap_to_queue_spot()
+			check_queue_position()
+		return
 
 	var next_path_pos: Vector3 = nav_agent.get_next_path_position()
 	var current_pos: Vector3 = global_position
@@ -140,10 +169,16 @@ func _on_velocity_computed(safe_velocity: Vector3) -> void:
 
 	if direction.length_squared() > 0.01:
 		var visual_forward = global_transform.basis.x 
-		
 		var angle_diff = visual_forward.signed_angle_to(direction, Vector3.UP)
 		angular_velocity.y = angle_diff * turn_speed
 
+func snap_to_queue_spot() -> void:
+	if not is_instance_valid(target_marker): return
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	global_position = target_marker.global_position
+	global_transform.basis = target_marker.global_transform.basis
+	rotate_y(PI)
 
 func place_ladder_on_wall() -> void:
 	current_state = State.PLACING_LADDER
@@ -162,31 +197,119 @@ func place_ladder_on_wall() -> void:
 	
 	ladder.global_transform = target_marker.global_transform
 	
-	target_marker = invasion_manager.register_placed_ladder(ladder, true)
+	target_marker = invasion_manager.register_placed_ladder(ladder, self)
 	
 	if target_marker:
 		freeze = false
-		nav_agent.target_position = target_marker.global_position
-		current_state = State.MOVING_TO_QUEUE
+		current_state = State.WAITING_IN_QUEUE
+		snap_to_queue_spot()
+		check_queue_position()
 	else:
+		freeze = false
 		current_state = State.IDLE
 
+func check_queue_position() -> void:
+	if not is_instance_valid(target_marker): return
+	
+	if target_marker.name == \"Spot1\":
+		get_tree().create_timer(1.0).timeout.connect(climb_ladder)
+
+func advance_to_spot(new_marker: Marker3D) -> void:
+	if not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(new_marker):
+		return
+
+	target_marker = new_marker
+	
+	if current_state == State.WAITING_IN_QUEUE:
+		perform_parabolic_jump(new_marker.global_position, 0.5, false)
+	elif current_state == State.MOVING_TO_QUEUE:
+		nav_agent.target_position = target_marker.global_position
+
+func climb_ladder() -> void:
+	if not is_instance_valid(target_marker) or not is_instance_valid(invasion_manager): return
+	
+	var queue_node = target_marker.get_parent()
+	var ladder_node = queue_node.get_parent()
+	var jump_to_marker = ladder_node.get_node_or_null(\"JumpTo\")
+	
+	if jump_to_marker:
+		invasion_manager.release_claim(target_marker)
+		target_marker = null 
+		
+		perform_parabolic_jump(jump_to_marker.global_position, 1.0, true)
+
+func perform_parabolic_jump(target_pos: Vector3, _duration: float, is_climbing_wall: bool) -> void:
+	if is_picked_up():
+		return
+
+	current_state = State.JUMPING_QUEUE
+	is_jumping_to_wall = is_climbing_wall
+	
+	freeze = false
+	
+	var direction = (target_pos - global_position)
+	direction.y = 0
+	if direction.length_squared() > 0.01:
+		var target_rot_y = atan2(-direction.x, -direction.z)
+		rotation.y = target_rot_y
+
+	var impulse = _calculate_jump_impulse(target_pos, 0.8)
+	
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	apply_central_impulse(impulse * mass)
+
+func _calculate_jump_impulse(target_pos: Vector3, added_height: float) -> Vector3:
+	var gravity: float = ProjectSettings.get_setting(\"physics/3d/default_gravity\")
+	var start_pos = global_position
+	var peak_y = max(start_pos.y, target_pos.y) + added_height
+	
+	var displacement_y_up = peak_y - start_pos.y
+	var velocity_y = sqrt(2.0 * gravity * displacement_y_up)
+	
+	var time_up = velocity_y / gravity
+	var displacement_y_down = max(0.0, peak_y - target_pos.y)
+	var time_down = sqrt(2.0 * displacement_y_down / gravity)
+	var total_time = time_up + time_down
+	
+	var displacement_xz = Vector3(target_pos.x - start_pos.x, 0, target_pos.z - start_pos.z)
+	var velocity_xz = displacement_xz / total_time
+	
+	return velocity_xz + Vector3(0, velocity_y, 0)
+
 func _on_body_entered(body: Node) -> void:
-	# OUTSIDE BEHAVIOR (Check by name OR a separate group)
+	if current_state == State.JUMPING_QUEUE:
+		if body.is_in_group(\"outside_floor\") or body.is_in_group(\"floor\"):
+			if is_picked_up():
+				return
+				
+			if is_jumping_to_wall:
+				reset_to_idle()
+			else:
+				current_state = State.WAITING_IN_QUEUE
+				snap_to_queue_spot()
+				check_queue_position()
+			return
+
+	if current_state == State.WAITING_IN_QUEUE:
+		return
+		
 	if body.is_in_group(\"outside_floor\"):
-		if is_instance_valid(ladder) and ladder.get_parent() == self:
+		if current_state == State.AIRBORNE:
+			reset_to_idle()
+			
+		if current_state == State.IDLE:
 			start_ladder_placement_sequence()
-		elif current_state == State.AIRBORNE:
-			reset_to_idle()
-			
-	# INSIDE BEHAVIOR (Castle interior)
+
 	elif body.is_in_group(\"floor\"):
-		if current_state != State.IDLE and current_state != State.TELEGRAPHING:
-			reset_to_idle()
-			
+		if current_state in [State.MOVING_TO_QUEUE, State.MOVING_TO_WALL]:
 			if target_marker and invasion_manager:
 				invasion_manager.release_claim(target_marker)
 				target_marker = null
+			reset_to_idle()
+			
+		elif current_state == State.AIRBORNE:
+			reset_to_idle()
 
 func reset_to_idle() -> void:
 	current_state = State.IDLE
@@ -197,7 +320,6 @@ func reset_to_idle() -> void:
 			anim_tween.kill()
 		mesh.scale = base_mesh_scale
 		mesh.rotation = Vector3.ZERO
-
 
 func start_telegraph() -> void:
 	if current_state != State.IDLE or not target: return
@@ -272,7 +394,6 @@ func leap_at_target() -> void:
 	var stretch_scale = base_mesh_scale * Vector3(0.7, 1.5, 0.7)
 	anim_tween.tween_property(mesh, \"scale\", stretch_scale, 0.1).set_trans(Tween.TRANS_SINE)
 	anim_tween.tween_property(mesh, \"scale\", base_mesh_scale, 0.2).set_trans(Tween.TRANS_SINE)
-
 
 func _on_snatch_area_body_entered(body: Node) -> void:
 	if current_state != State.AIRBORNE or has_stolen_crown: return

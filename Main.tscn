@@ -15,7 +15,6 @@
 [ext_resource type="Texture2D" uid="uid://ceixgxq73txjx" path="res://textures/Poliigon_GrassPatchyGround_4585_BaseColor.jpg" id="11_hhcpw"]
 [ext_resource type="Texture2D" uid="uid://dkfdoyt736qqq" path="res://textures/Poliigon_GrassPatchyGround_4585_AmbientOcclusion.jpg" id="12_mxvw5"]
 [ext_resource type="Texture2D" uid="uid://dqtwsmrelfq8m" path="res://textures/Poliigon_GrassPatchyGround_4585_Normal.png" id="13_xrxkg"]
-[ext_resource type="PackedScene" uid="uid://bfvn217w1kdr5" path="res://GeoSlime.tscn" id="14_sqvbp"]
 
 [sub_resource type="GDScript" id="GDScript_7mycd"]
 script/source = "extends Node3D
@@ -67,12 +66,14 @@ sdfgi_min_cell_size = 10.975489
 sdfgi_y_scale = 0
 glow_normalized = true
 glow_intensity = 0.2
+fog_enabled = true
 fog_mode = 1
 fog_density = 1.0
 fog_sky_affect = 0.96
 fog_depth_curve = 1.8025018
 fog_depth_begin = 0.0
 fog_depth_end = 50.0
+volumetric_fog_enabled = true
 volumetric_fog_density = 0.01
 volumetric_fog_albedo = Color(0.88, 0.82984, 0.7216, 1)
 volumetric_fog_gi_inject = 2.0
@@ -540,8 +541,3 @@ transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, -
 visible = false
 navigation_mesh = SubResource("NavigationMesh_hpdbv")
 use_edge_connections = false
-
-[node name="GeoSlime" parent="." unique_id=1405803306 node_paths=PackedStringArray("target") instance=ExtResource("14_sqvbp")]
-transform = Transform3D(-0.24424413, 0, -0.9697138, 0, 1, 0, 0.9697138, 0, -0.24424413, 1.2172982, 1.536196, -1.2498133)
-turn_speed = 10.0
-target = NodePath("../Crown")

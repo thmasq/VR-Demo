@@ -13,8 +13,6 @@ func _ready() -> void:
 					"marker": child,
 					"is_claimed": false
 				})
-	else:
-		push_error("InvasionManager: Could not find 'LadderClimbingSpots'. Check your node paths.")
 
 func claim_closest_ladder_spot(requester_pos: Vector3) -> Marker3D:
 	var closest_spot: Dictionary = {}
@@ -33,7 +31,7 @@ func claim_closest_ladder_spot(requester_pos: Vector3) -> Marker3D:
 		
 	return null
 
-func register_placed_ladder(ladder: Node3D, auto_claim_first_spot: bool = true) -> Marker3D:
+func register_placed_ladder(ladder: Node3D, placer_slime: Node3D) -> Marker3D:
 	var queue_parent = ladder.get_node_or_null("Queue")
 	var first_spot_marker: Marker3D = null
 	
@@ -42,45 +40,65 @@ func register_placed_ladder(ladder: Node3D, auto_claim_first_spot: bool = true) 
 		for i in range(spots.size()):
 			var spot_node = spots[i]
 			if spot_node is Marker3D:
-				var is_claimed = (i == 0 and auto_claim_first_spot)
-				if is_claimed:
+				var occupant = null
+				
+				if i == 0 and is_instance_valid(placer_slime):
 					first_spot_marker = spot_node
+					occupant = placer_slime
 					
 				active_queue_spots.append({
 					"marker": spot_node,
-					"is_claimed": is_claimed
+					"ladder": ladder,
+					"index": i,
+					"occupant": occupant
 				})
 				
 	return first_spot_marker
 
-
-func claim_closest_queue_spot(requester_pos: Vector3) -> Marker3D:
+func claim_closest_queue_spot(requester: Node3D) -> Marker3D:
 	var closest_spot: Dictionary = {}
 	var shortest_dist: float = INF
 	
 	for spot in active_queue_spots:
-		if is_instance_valid(spot["marker"]) and not spot["is_claimed"]:
-			var dist = requester_pos.distance_squared_to(spot["marker"].global_position)
+		if is_instance_valid(spot["marker"]) and spot["occupant"] == null:
+			var dist = requester.global_position.distance_squared_to(spot["marker"].global_position)
 			if dist < shortest_dist:
 				shortest_dist = dist
 				closest_spot = spot
 				
 	if not closest_spot.is_empty():
-		closest_spot["is_claimed"] = true
+		closest_spot["occupant"] = requester
 		return closest_spot["marker"]
 		
 	return null
 
 
-func has_available_ladder_spots() -> bool:
-	for spot in castle_ladder_spots:
-		if not spot["is_claimed"]:
-			return true
-	return false
+func compact_ladder_queue(ladder: Node3D) -> void:
+	var ladder_spots = []
+	for spot in active_queue_spots:
+		if spot.get("ladder") == ladder:
+			ladder_spots.append(spot)
+			
+	ladder_spots.sort_custom(func(a, b): return a["index"] < b["index"])
+	
+	for i in range(ladder_spots.size() - 1):
+		if ladder_spots[i]["occupant"] == null:
+			for j in range(i + 1, ladder_spots.size()):
+				if is_instance_valid(ladder_spots[j]["occupant"]):
+					var slime = ladder_spots[j]["occupant"]
+					
+					if not slime.is_inside_tree() or slime.is_queued_for_deletion():
+						continue 
+					
+					ladder_spots[i]["occupant"] = slime
+					ladder_spots[j]["occupant"] = null
+					
+					if slime.has_method("advance_to_spot"):
+						slime.advance_to_spot(ladder_spots[i]["marker"])
+					break
 
 func release_claim(marker: Marker3D) -> void:
-	if not is_instance_valid(marker):
-		return
+	if not is_instance_valid(marker): return
 		
 	for spot in castle_ladder_spots:
 		if spot["marker"] == marker:
@@ -89,11 +107,14 @@ func release_claim(marker: Marker3D) -> void:
 			
 	for spot in active_queue_spots:
 		if spot["marker"] == marker:
-			spot["is_claimed"] = false
+			spot["occupant"] = null
+			
+			if is_instance_valid(spot.get("ladder")):
+				compact_ladder_queue(spot["ladder"])
 			return
 
-func _process(_delta: float) -> void:
-	for i in range(active_queue_spots.size() - 1, -1, -1):
-		var spot = active_queue_spots[i]
-		if not is_instance_valid(spot["marker"]):
-			active_queue_spots.remove_at(i)
+func has_available_ladder_spots() -> bool:
+	for spot in castle_ladder_spots:
+		if not spot["is_claimed"]:
+			return true
+	return false
