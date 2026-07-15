@@ -1,9 +1,10 @@
-[gd_scene format=4 uid="uid://bfvn217w1kdr5"]
+[gd_scene format=4 uid="uid://7th10l01h0xa"]
 
-[ext_resource type="PackedScene" uid="uid://c8l60rnugru40" path="res://addons/godot-xr-tools/objects/pickable.tscn" id="1_tipk1"]
-[ext_resource type="Texture2D" uid="uid://wrkukda03r6" path="res://assets/GeoSlime/emission.png" id="3_j7x6a"]
-[ext_resource type="Texture2D" uid="uid://bgm7rv1vu2c33" path="res://assets/GeoSlime/bake.png" id="3_s6ur2"]
-[ext_resource type="Script" uid="uid://dx3swqg2owe4p" path="res://addons/godot-xr-tools/objects/grab_points/grab_point_hand.gd" id="5_1j17w"]
+[ext_resource type="PackedScene" uid="uid://c8l60rnugru40" path="res://addons/godot-xr-tools/objects/pickable.tscn" id="1_xg1cp"]
+[ext_resource type="Texture2D" uid="uid://bgm7rv1vu2c33" path="res://assets/GeoSlime/bake.png" id="2_tjv7k"]
+[ext_resource type="Texture2D" uid="uid://wrkukda03r6" path="res://assets/GeoSlime/emission.png" id="3_h4bfu"]
+[ext_resource type="Script" uid="uid://dx3swqg2owe4p" path="res://addons/godot-xr-tools/objects/grab_points/grab_point_hand.gd" id="4_lmmot"]
+[ext_resource type="PackedScene" uid="uid://gp77tmpor3f0" path="res://Ladder.tscn" id="5_tjv7k"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_50oqk"]
 bounce = 0.75
@@ -17,7 +18,7 @@ extends XRToolsPickable
 @export var speed: float = 3.0
 @export var turn_speed: float = 10.0
 
-@export_category(\"Jump AI Settings\")
+@export_category(\"Jump AI Settings (Inside)\")
 @export var target: Node3D
 @export var arc_height: float = 1.0
 @export var telegraph_duration: float = 0.2
@@ -25,11 +26,13 @@ extends XRToolsPickable
 
 var is_guaranteed_miss: bool = false
 
-enum State {
-	IDLE,
-	TELEGRAPHING,
-	AIRBORNE,
-	MOVING_TO_QUEUE
+enum State { 
+	IDLE, 
+	TELEGRAPHING, 
+	AIRBORNE, 
+	MOVING_TO_WALL, 
+	PLACING_LADDER, 
+	MOVING_TO_QUEUE 
 }
 var current_state: State = State.IDLE
 
@@ -39,6 +42,7 @@ var current_state: State = State.IDLE
 @onready var snatch_area: Area3D = $SnatchArea
 @onready var crown_holder: Marker3D = $CrownHolder
 @onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
+@onready var ladder: Node3D = get_node_or_null(\"Ladder\")
 
 var anim_tween: Tween
 var base_mesh_scale: Vector3
@@ -51,11 +55,11 @@ var target_marker: Marker3D = null
 
 func _ready() -> void:
 	super._ready()
-
+	
 	if Engine.is_editor_hint(): return
 
 	contact_monitor = true
-	max_contacts_reported = 5
+	max_contacts_reported = 5 
 
 	base_mesh_scale = mesh.scale
 
@@ -80,32 +84,33 @@ func _ready() -> void:
 	nav_agent.velocity_computed.connect(_on_velocity_computed)
 
 func _physics_process(delta: float) -> void:
-	if is_picked_up():
+	if is_picked_up(): 
 		return
-
-	if current_state == State.MOVING_TO_QUEUE:
+		
+	if current_state == State.MOVING_TO_WALL or current_state == State.MOVING_TO_QUEUE:
 		navigate_to_target(delta)
 
-func start_queue_navigation_sequence() -> void:
-	if not invasion_manager or current_state == State.MOVING_TO_QUEUE:
+func start_ladder_placement_sequence() -> void:
+	if not invasion_manager or current_state in [State.MOVING_TO_WALL, State.PLACING_LADDER, State.MOVING_TO_QUEUE]: 
 		return
-
-	target_marker = invasion_manager.claim_closest_queue_spot(global_position)
-
-	if target_marker:
-		nav_agent.target_position = target_marker.global_position
-		current_state = State.MOVING_TO_QUEUE
-	else:
-		current_state = State.IDLE
-		get_tree().create_timer(1.5).timeout.connect(start_queue_navigation_sequence)
+	
+	if target_marker == null and is_instance_valid(ladder) and ladder.get_parent() == self:
+		target_marker = invasion_manager.claim_closest_ladder_spot(global_position)
+		
+		if target_marker:
+			nav_agent.target_position = target_marker.global_position
+			current_state = State.MOVING_TO_WALL
 
 func navigate_to_target(_delta: float) -> void:
 	if nav_agent.is_navigation_finished():
-		current_state = State.IDLE
-		linear_velocity = Vector3.ZERO
-		global_position = target_marker.global_position
-		look_at(global_position - target_marker.global_transform.basis.z, Vector3.UP)
-		return
+		if current_state == State.MOVING_TO_WALL:
+			place_ladder_on_wall()
+		elif current_state == State.MOVING_TO_QUEUE:
+			current_state = State.IDLE
+			
+			freeze = true
+			global_position = target_marker.global_position
+			look_at(global_position - target_marker.global_transform.basis.z, Vector3.UP)
 
 	var next_path_pos: Vector3 = nav_agent.get_next_path_position()
 	var current_pos: Vector3 = global_position
@@ -122,11 +127,14 @@ func navigate_to_target(_delta: float) -> void:
 		_on_velocity_computed(desired_velocity)
 
 func _on_velocity_computed(safe_velocity: Vector3) -> void:
-	if is_picked_up() or current_state != State.MOVING_TO_QUEUE:
+	# Allow movement if we are moving to the wall OR moving to the queue
+	if is_picked_up() or not (current_state == State.MOVING_TO_WALL or current_state == State.MOVING_TO_QUEUE):
 		return
 
+	# 1. Apply the safe velocity to our physics body, keeping gravity
 	linear_velocity = Vector3(safe_velocity.x, linear_velocity.y, safe_velocity.z)
 
+	# 2. Rotate the mesh toward the safe direction
 	var direction = safe_velocity
 	direction.y = 0
 	direction = direction.normalized()
@@ -145,24 +153,52 @@ func _on_velocity_computed(safe_velocity: Vector3) -> void:
 		mesh.scale = current_scale
 
 
-func _on_body_entered(body: Node) -> void:
-	# OUTSIDE BEHAVIOR (Uses \"outside_floor\" group matching Ladder Slime)
-	if body.is_in_group(\"outside_floor\"):
-		if current_state == State.AIRBORNE:
-			reset_to_idle()
-		start_queue_navigation_sequence()
+func place_ladder_on_wall() -> void:
+	current_state = State.PLACING_LADDER
+	
+	freeze = true
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	
+	if not is_instance_valid(ladder):
+		freeze = false
+		current_state = State.IDLE
+		return 
+	
+	var castle_node = invasion_manager.get_parent()
+	ladder.reparent(castle_node, true)
+	
+	ladder.global_transform = target_marker.global_transform
+	
+	target_marker = invasion_manager.register_placed_ladder(ladder, true)
+	
+	if target_marker:
+		freeze = false
+		nav_agent.target_position = target_marker.global_position
+		current_state = State.MOVING_TO_QUEUE
+	else:
+		current_state = State.IDLE
 
-	# INSIDE BEHAVIOR (Castle interior floor group)
+func _on_body_entered(body: Node) -> void:
+	# OUTSIDE BEHAVIOR (Check by name OR a separate group)
+	if body.is_in_group(\"outside_floor\"):
+		if is_instance_valid(ladder) and ladder.get_parent() == self:
+			start_ladder_placement_sequence()
+		elif current_state == State.AIRBORNE:
+			reset_to_idle()
+			
+	# INSIDE BEHAVIOR (Castle interior)
 	elif body.is_in_group(\"floor\"):
 		if current_state != State.IDLE and current_state != State.TELEGRAPHING:
+			reset_to_idle()
+			
 			if target_marker and invasion_manager:
 				invasion_manager.release_claim(target_marker)
 				target_marker = null
 
-			reset_to_idle()
-
 func reset_to_idle() -> void:
 	current_state = State.IDLE
+	freeze = false
 	linear_velocity = Vector3.ZERO
 	if mesh:
 		if anim_tween:
@@ -178,7 +214,7 @@ func start_telegraph() -> void:
 		if body.is_in_group(\"floor\"):
 			is_on_valid_floor = true
 			break
-
+			
 	if not is_on_valid_floor:
 		return
 
@@ -244,6 +280,7 @@ func leap_at_target() -> void:
 	anim_tween.tween_property(mesh, \"scale\", stretch_scale, 0.1).set_trans(Tween.TRANS_SINE)
 	anim_tween.tween_property(mesh, \"scale\", base_mesh_scale, 0.2).set_trans(Tween.TRANS_SINE)
 
+
 func _on_snatch_area_body_entered(body: Node) -> void:
 	if current_state != State.AIRBORNE or has_stolen_crown: return
 	if is_guaranteed_miss: return
@@ -266,25 +303,25 @@ func steal_crown(crown: Node3D) -> void:
 			holder = crown.get_picked_up_by()
 		else:
 			holder = crown.get(\"picked_up_by\")
-
+	
 		if holder and holder.has_method(\"drop_object\"):
 			var holder_was_enabled = false
 			if \"enabled\" in holder:
 				holder_was_enabled = holder.get(\"enabled\")
 				holder.set(\"enabled\", false)
-
+		
 			holder.drop_object()
-
+	
 			if \"enabled\" in holder:
 				holder.set(\"enabled\", holder_was_enabled)
-
+	
 	if crown is RigidBody3D:
 		crown.freeze = true
 
 	for child in crown.get_children():
 		if child is CollisionShape3D:
 			child.set_deferred(\"disabled\", true)
-
+	
 	if crown.get_parent():
 		crown.reparent(crown_holder, false)
 
@@ -338,8 +375,8 @@ func _on_doom_timer_timeout() -> void:
 		stolen_crown.apply_central_impulse(toss_impulse)
 
 		stolen_crown.angular_velocity = Vector3(
-			randf_range(-4, 4),
-			randf_range(-4, 4),
+			randf_range(-4, 4), 
+			randf_range(-4, 4), 
 			randf_range(-4, 4)
 		)
 
@@ -352,27 +389,26 @@ func _on_doom_timer_timeout() -> void:
 
 	has_stolen_crown = false
 	stolen_crown = null
-
+	
 	melt_away()
 
 func melt_away() -> void:
 	freeze = true
 	collision_layer = 0
 	collision_mask = 0
-
+	
 	if snatch_area:
 		snatch_area.set_deferred(\"monitoring\", false)
-
+		
 	current_state = State.IDLE
-
+	
 	if anim_tween:
 		anim_tween.kill()
 	anim_tween = create_tween()
-
+	
 	var puddle_scale = Vector3(base_mesh_scale.x * 1.5, 0.05, base_mesh_scale.z * 1.5)
 	anim_tween.tween_property(mesh, \"scale\", puddle_scale, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	anim_tween.finished.connect(queue_free)
-
 
 func _exit_tree() -> void:
 	if target_marker and invasion_manager:
@@ -474,12 +510,12 @@ resource_name = "wind"
 render_priority = 0
 shader = SubResource("Shader_tipk1")
 shader_parameter/albedo = Color(1, 1, 1, 1)
-shader_parameter/texture_albedo = ExtResource("3_s6ur2")
+shader_parameter/texture_albedo = ExtResource("2_tjv7k")
 shader_parameter/use_posterization = true
 shader_parameter/color_steps = 6.0
 shader_parameter/black_level_lift = 0.0
 shader_parameter/emission_color = Color(1, 0.7, 0.1, 1)
-shader_parameter/texture_emission = ExtResource("3_j7x6a")
+shader_parameter/texture_emission = ExtResource("3_h4bfu")
 shader_parameter/emission_energy = 1.0000000149012
 shader_parameter/shadow_color = Color(0.25, 0.18, 0.15, 1)
 shader_parameter/shadow_threshold = 0.0
@@ -526,7 +562,7 @@ shadow_mesh = SubResource("ArrayMesh_apqlm")
 [sub_resource type="SphereShape3D" id="SphereShape3D_hpdbv"]
 radius = 0.08879755
 
-[node name="GeoSlime" unique_id=639255984 instance=ExtResource("1_tipk1")]
+[node name="GeoSlimeWithLadder" unique_id=639255984 instance=ExtResource("1_xg1cp")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
 collision_mask = 196678
 physics_material_override = SubResource("PhysicsMaterial_50oqk")
@@ -552,12 +588,12 @@ mesh = SubResource("ArrayMesh_a1cty")
 
 [node name="GripPointLeft" type="Marker3D" parent="." index="2" unique_id=683026074]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.024739344, 0.051029444, 0.087944135)
-script = ExtResource("5_1j17w")
+script = ExtResource("4_lmmot")
 metadata/_custom_type_script = "uid://dx3swqg2owe4p"
 
 [node name="GripPointRight" type="Marker3D" parent="." index="3" unique_id=1232636704]
 transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -0.024739344, 0.051029444, -0.08847552)
-script = ExtResource("5_1j17w")
+script = ExtResource("4_lmmot")
 hand = 1
 metadata/_custom_type_script = "uid://dx3swqg2owe4p"
 
@@ -577,8 +613,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1385349, 0)
 
 [node name="DoomTimer" type="Timer" parent="." index="7" unique_id=1328932659]
 
-[node name="NavigationAgent3D" type="NavigationAgent3D" parent="." index="8" unique_id=244800890]
+[node name="Ladder" parent="." index="8" unique_id=519417918 instance=ExtResource("5_tjv7k")]
+transform = Transform3D(-4.371138e-08, 0, 1, 0, 1, 0, -1, 0, -4.371138e-08, 0.21496724, -0.127599, 1.8793033e-08)
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="." index="9" unique_id=1407627701]
 target_desired_distance = 0.5
 avoidance_enabled = true
 radius = 0.2
-use_3d_avoidance = true
